@@ -1,0 +1,8 @@
+*.o
+*.a
+*.pyc
+.*.swp
+conv_enc_test
+burst_test
+float_to_bits
+crc_test
