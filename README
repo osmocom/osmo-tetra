@@ -1,0 +1,50 @@
+TETRA MAC/PHY layer experimentation code
+(C) 2010 by Harald Welte <laforge@gnumonks.org>
+======================================================================
+
+This code aims to implement the (so far) sending and (in the future)
+receiving part of the TETRA MAC/PHY layer.
+
+If you read the ETSI EN 300 392-2 (TETRA V+D Air Interface), you will
+find this code implementing the parts between the MAC-blocks (called
+type-1 bits) and the bits that go to the DQPSK-modulator (type-5 bits).
+
+It is most useful to look at Figure 8.5, 8.6, 9.3 and 19.12 in conjunction
+with this program.
+
+Specifically, it implements:
+	lib_crc.[ch]
+		* CRC16-CCITT (currently defunct/broken as we need it for
+		  non-octet-aligned bitfields)
+	tetra_rm3014.[ch]
+		* (30, 14) Reed-Muller code for the ACCH (broadcast block of
+		  each downlink burst)
+	tetra_conv_enc.[ch]
+		* 16-state Rate-Compatible Punctured Convolutional (RCPC) coder
+	tetra_interleave.[ch]
+		* Block interleaving (over a single block only)
+	tetra_scramb.[ch]
+		* Scrambling
+	tetra_burst.[ch]
+		* Routines to encode continuous normal and sync bursts
+	testpdu.[ch]
+		* Routines to build some example SYNC-PDU and SYSINFO-PDU
+
+The main program conv_enc_test.c generates a single continuous downlinc sync
+burst (SB), contining:
+	* a SYNC-PDU as block 1
+	* a ACCESS-ASSIGN PDU as broadcast block
+	* a SYSINFO-PDU as block 2
+
+Scrambling is set to 0 (no scrambling) for all elements of the burst.
+
+You will need libosmocore (http://bb.osmocom.org/trac/wiki/libosmocore) to link.
+
+
+
+USAGE:
+
+	src/float_to_bits data/dqpsk-float.dat data/out.bits
+
+	src/burst_test data/out.bits
+
