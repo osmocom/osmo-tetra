@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<block>
+    <name>Tetra QPSK pi/4 demodulation</name>
+    <key>tetra_demod</key>
+    <category>Tetra</category>
+    <import>import tetra_demod</import>
+    <make>tetra_demod.demod()</make>
+
+    <sink>
+        <name>in</name>
+        <type>complex</type>
+    </sink>
+
+    <source>
+        <name>out</name>
+        <type>float</type>
+    </source>
+</block>
