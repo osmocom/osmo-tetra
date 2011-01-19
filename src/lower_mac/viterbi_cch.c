@@ -20,7 +20,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <lower_mac/viterbi.h>
+#include <lower_mac/viterbi_cch.h>
 
 
 #define CONV_CCH_N		4
