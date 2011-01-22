@@ -1,7 +1,7 @@
 CFLAGS=-g -O0 -Wall `pkg-config --cflags libosmocore 2> /dev/null` -I.
 LDFLAGS=`pkg-config --libs libosmocore 2> /dev/null` -losmocore
 
-all: conv_enc_test crc_test burst_test float_to_bits
+all: conv_enc_test crc_test tetra-rx float_to_bits
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $^ -o $@
@@ -16,7 +16,7 @@ float_to_bits: float_to_bits.o
 
 crc_test: crc_test.o tetra_common.o libosmo-tetra-mac.a
 
-burst_test: burst_test.o libosmo-tetra-phy.a libosmo-tetra-mac.a
+tetra-rx: tetra-rx.o libosmo-tetra-phy.a libosmo-tetra-mac.a
 
 conv_enc_test: conv_enc_test.o testpdu.o libosmo-tetra-phy.a libosmo-tetra-mac.a
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
