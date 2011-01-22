@@ -22,4 +22,4 @@ conv_enc_test: conv_enc_test.o testpdu.o libosmo-tetra-phy.a libosmo-tetra-mac.a
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 clean:
-	@rm -f conv_enc_test crc_test burst_test float_to_bits *.o phy/*.o lower_mac/*.o *.a
+	@rm -f float_to_bits crc_test tetra-rx conv_enc_test *.o phy/*.o lower_mac/*.o *.a

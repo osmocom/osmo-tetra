@@ -3,6 +3,6 @@
 *.pyc
 .*.swp
 conv_enc_test
-burst_test
+tetra-rx
 float_to_bits
 crc_test
