@@ -1,0 +1,4 @@
+* implement lower mac processing chain for TCH/F voice frames
+* implement STCH / TCH separation and 'reduced/half' voice frame
+* implement wireshark dissector using GSMTAP TETRA encapsulation
+* implement simple BSCH/BNCH transmitter
