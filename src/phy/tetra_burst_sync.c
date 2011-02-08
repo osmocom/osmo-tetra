@@ -100,7 +100,7 @@ int tetra_burst_sync_in(struct tetra_rx_state *trs, uint8_t *bits, unsigned int 
 		} else {
 			/* we have successfully received (at least) one frame */
 			tetra_tdma_time_add_tn(&t_phy_state.time, 1);
-			printf("\nBURST: %s\n", bitdump(trs->bitbuf, TETRA_BITS_PER_TS));
+			printf("\nBURST: %s\n", ubit_dump(trs->bitbuf, TETRA_BITS_PER_TS));
 			rc = tetra_find_train_seq(trs->bitbuf, trs->bits_in_buf,
 						  (1 << TETRA_TRAIN_NORM_1)|
 						  (1 << TETRA_TRAIN_NORM_2)|

@@ -85,7 +85,7 @@ static int rx_tm_sdu(uint8_t *bits, unsigned int len)
 	uint8_t mle_pdisc = bits_to_uint(bits, 3);
 
 	printf("TM-SDU(%s): %s", tetra_get_mle_pdisc_name(mle_pdisc),
-		bitdump(bits, len));
+		ubit_dump(bits, len));
 	switch (mle_pdisc) {
 	case TMLE_PDISC_MM:
 		printf(" %s", tetra_get_mm_pdut_name(bits_to_uint(bits+3, 4), 0));

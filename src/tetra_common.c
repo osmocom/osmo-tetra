@@ -38,37 +38,6 @@ uint32_t bits_to_uint(const uint8_t *bits, unsigned int len)
 	return ret;
 }
 
-const char *bitdump(const uint8_t *bits, unsigned int len)
-{
-	int i;
-	static char hexd_buff[4096];
-
-	if (len > sizeof(hexd_buff)-1)
-		len = sizeof(hexd_buff)-1;
-	memset(hexd_buff, 0, sizeof(hexd_buff));
-
-	for (i = 0; i < len; i++) {
-		char outch;
-		switch (bits[i]) {
-		case 0:
-			outch = '0';
-			break;
-		case 0xff:
-			outch = '?';
-			break;
-		case 1:
-			outch = '1';
-			break;
-		default:
-			outch = 'E';
-			break;
-		}
-		hexd_buff[i] = outch;
-	}
-	hexd_buff[sizeof(hexd_buff)-1] = 0;
-	return hexd_buff;
-}
-
 static inline uint32_t tetra_band_base_hz(uint8_t band)
 {
 	return (band * 100000000);

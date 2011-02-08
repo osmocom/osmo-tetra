@@ -32,7 +32,6 @@ enum tetra_log_chan {
 	/* FIXME: QAM */
 };
 
-const char *bitdump(const uint8_t *bits, unsigned int len);
 uint32_t bits_to_uint(const uint8_t *bits, unsigned int len);
 
 #include "tetra_tdma.h"
