@@ -20,7 +20,7 @@ class my_top_block(gr.top_block):
         gr.top_block.__init__(self)
         parser = OptionParser(option_class=eng_option)
 
-        parser.add_option("-c", "--calibration", type="int", default=-40000, help="freq offset")
+        parser.add_option("-c", "--calibration", type="eng_float", default=0, help="freq offset")
         parser.add_option("-i", "--input-file", type="string", default="in.dat", help="specify the input file")
         parser.add_option("-l", "--log", action="store_true", default=False, help="dump debug .dat files")
         parser.add_option("-L", "--low-pass", type="eng_float", default=25e3, help="low pass cut-off", metavar="Hz")
