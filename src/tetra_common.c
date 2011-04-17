@@ -22,8 +22,8 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <osmocore/utils.h>
-#include <osmocore/bits.h>
+#include <osmocom/core/utils.h>
+#include <osmocom/core/bits.h>
 
 #include "tetra_common.h"
 #include "tetra_prim.h"

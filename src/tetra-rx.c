@@ -26,7 +26,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include <osmocore/utils.h>
+#include <osmocom/core/utils.h>
 
 #include "tetra_common.h"
 #include <phy/tetra_burst.h>

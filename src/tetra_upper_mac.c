@@ -23,7 +23,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <osmocore/utils.h>
+#include <osmocom/core/utils.h>
 
 #include "tetra_common.h"
 #include "tetra_prim.h"

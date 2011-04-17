@@ -19,7 +19,7 @@
  */
 
 #include <unistd.h>
-#include <osmocore/utils.h>
+#include <osmocom/core/utils.h>
 
 #include "tetra_mm_pdu.h"
 

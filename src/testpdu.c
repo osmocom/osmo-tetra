@@ -20,8 +20,8 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <osmocore/bitvec.h>
-#include <osmocore/utils.h>
+#include <osmocom/core/bitvec.h>
+#include <osmocom/core/utils.h>
 
 #include "testpdu.h"
 

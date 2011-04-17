@@ -24,7 +24,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <osmocore/utils.h>
+#include <osmocom/core/utils.h>
 
 #include "tetra_common.h"
 #include "tetra_mac_pdu.h"

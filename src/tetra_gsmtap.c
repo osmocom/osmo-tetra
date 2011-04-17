@@ -4,9 +4,9 @@
 #include <unistd.h>
 #include <stdio.h>
 
-#include <osmocore/msgb.h>
-#include <osmocore/gsmtap.h>
-#include <osmocore/bits.h>
+#include <osmocom/core/msgb.h>
+#include <osmocom/core/gsmtap.h>
+#include <osmocom/core/bits.h>
 #include <netinet/in.h>
 
 #include "tetra_common.h"
