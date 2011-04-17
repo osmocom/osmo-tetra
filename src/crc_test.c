@@ -17,6 +17,8 @@
  */
 #include <stdio.h>
 
+#include <osmocom/core/bits.h>
+
 #include "tetra_common.h"
 #include <lower_mac/crc_simple.h>
 
