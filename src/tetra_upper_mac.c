@@ -198,8 +198,11 @@ static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp)
 		break;
 	}
 	if (pdu_type == TETRA_PDU_T_MAC_FRAG_END) {
-		if (tup->mac_block[3] == TETRA_MAC_FRAGE_FRAG)
+		if (tup->mac_block[3] == TETRA_MAC_FRAGE_FRAG) {
+			printf("FRAG/END FRAG: ");
 			rx_tm_sdu(tup->mac_block+4, 100 /*FIXME*/);
+			printf("\n");
+		}
 	}
 
 	return 0;
