@@ -35,29 +35,40 @@ struct tetra_phy_state t_phy_state;
 
 void tetra_burst_rx_cb(const uint8_t *burst, unsigned int len, enum tetra_train_seq type, void *priv);
 
+static void make_bitbuf_space(struct tetra_rx_state *trs, unsigned int len)
+{
+	unsigned int bitbuf_space = sizeof(trs->bitbuf) - trs->bits_in_buf;
+
+	if (bitbuf_space < len) {
+		unsigned int delta = len - bitbuf_space;
+
+		DEBUGP("bitbuf left: %u, shrinking by %u\n", bitbuf_space, delta);
+		memmove(trs->bitbuf, trs->bitbuf + delta, trs->bits_in_buf - delta);
+		trs->bits_in_buf -= delta;
+		trs->bitbuf_start_bitnum += delta;
+		bitbuf_space = sizeof(trs->bitbuf) - trs->bits_in_buf;
+	}
+}
+
 /* input a raw bitstream into the tetra burst synchronizaer */
 int tetra_burst_sync_in(struct tetra_rx_state *trs, uint8_t *bits, unsigned int len)
 {
 	int rc;
 	unsigned int train_seq_offs;
-	int cpy_len;
 
 	DEBUGP("burst_sync_in: %u bits, state %u\n", len, trs->state);
 
 	/* First: append the data to the bitbuf */
-	if (sizeof(trs->bitbuf) - trs->bits_in_buf < len)
-		cpy_len = sizeof(trs->bitbuf) - trs->bits_in_buf;
-	else
-		cpy_len = len;
-	memcpy(trs->bitbuf + trs->bits_in_buf, bits, cpy_len);
-	trs->bits_in_buf += cpy_len;
+	make_bitbuf_space(trs, len);
+	memcpy(trs->bitbuf + trs->bits_in_buf, bits, len);
+	trs->bits_in_buf += len;
 
 	switch (trs->state) {
 	case RX_S_UNLOCKED:
 		if (trs->bits_in_buf < TETRA_BITS_PER_TS*2) {
 			/* wait for more bits to arrive */
 			DEBUGP("-> waiting for more bits to arrive\n");
-			return cpy_len;
+			return len;
 		}
 		DEBUGP("-> trying to find training sequence between bit %u and %u\n",
 			trs->bitbuf_start_bitnum, trs->bits_in_buf);
@@ -96,7 +107,7 @@ int tetra_burst_sync_in(struct tetra_rx_state *trs, uint8_t *bits, unsigned int 
 	case RX_S_LOCKED:
 		if (trs->bits_in_buf < TETRA_BITS_PER_TS) {
 			/* not sufficient data for the full frame yet */
-			return cpy_len;
+			return len;
 		} else {
 			/* we have successfully received (at least) one frame */
 			tetra_tdma_time_add_tn(&t_phy_state.time, 1);
@@ -137,5 +148,5 @@ int tetra_burst_sync_in(struct tetra_rx_state *trs, uint8_t *bits, unsigned int 
 		break;
 
 	}
-	return cpy_len;
+	return len;
 }
