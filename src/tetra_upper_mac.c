@@ -126,7 +126,7 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp)
 		printf("ChanAlloc=%s ", tetra_alloc_dump(&rsd.cad));
 
 	if (rsd.slot_granting.pres)
-		printf("SlotGrant=%u/%u\n", rsd.slot_granting.nr_slots,
+		printf("SlotGrant=%u/%u ", rsd.slot_granting.nr_slots,
 			rsd.slot_granting.delay);
 
 	if (rsd.macpdu_length > 0 && rsd.encryption_mode == 0) {
@@ -246,7 +246,11 @@ static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp)
 				printf("FRAG/END FRAG: ");
 				rx_tm_sdu(tup->mac_block+4, 100 /*FIXME*/);
 				printf("\n");
-			}
+			} else
+				printf("FRAG/END END\n");
+			break;
+		default:
+			printf("STRANGE pdu=%u\n", pdu_type);
 			break;
 		}
 		break;
