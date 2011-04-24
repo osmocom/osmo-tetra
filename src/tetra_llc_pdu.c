@@ -122,8 +122,7 @@ int tetra_llc_pdu_parse(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
 		if (*cur++) {
 			/* FINAL */
 			cur++;
-			cur += 2;
-			lpp->ns = bits_to_uint(cur, 5); cur += 5;
+			lpp->ns = bits_to_uint(cur, 3); cur += 3;
 			lpp->ss = bits_to_uint(cur, 8); cur += 8;
 			if (*cur++) {
 				/* FIXME: FCS */
