@@ -32,6 +32,7 @@
 #include "tetra_mle_pdu.h"
 #include "tetra_mm_pdu.h"
 #include "tetra_cmce_pdu.h"
+#include "tetra_sndcp_pdu.h"
 #include "tetra_gsmtap.h"
 
 static void rx_bcast(struct tetra_tmvsap_prim *tmvp)
@@ -93,6 +94,9 @@ static int rx_tm_sdu(uint8_t *bits, unsigned int len)
 		break;
 	case TMLE_PDISC_CMCE:
 		printf(" %s", tetra_get_cmce_pdut_name(bits_to_uint(bits+3, 5), 0));
+		break;
+	case TMLE_PDISC_SNDCP:
+		printf(" %s", tetra_get_sndcp_pdut_name(bits_to_uint(bits+3, 4), 0));
 		break;
 	default:
 		break;
