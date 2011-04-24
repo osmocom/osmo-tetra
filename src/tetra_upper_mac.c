@@ -29,7 +29,7 @@
 #include "tetra_prim.h"
 #include "tetra_upper_mac.h"
 #include "tetra_mac_pdu.h"
-#include "tetra_mle_pdu.h"
+#include "tetra_llc_pdu.h"
 #include "tetra_mm_pdu.h"
 #include "tetra_cmce_pdu.h"
 #include "tetra_sndcp_pdu.h"
@@ -95,11 +95,11 @@ const char *tetra_alloc_dump(const struct tetra_chan_alloc_decoded *cad)
 	return buf;
 }
 
-static int rx_tm_sdu(uint8_t *bits, unsigned int len)
+static int rx_tl_sdu(uint8_t *bits, unsigned int len)
 {
 	uint8_t mle_pdisc = bits_to_uint(bits, 3);
 
-	printf("TM-SDU(%s): %s", tetra_get_mle_pdisc_name(mle_pdisc),
+	printf("TL-SDU(%s): %s", tetra_get_mle_pdisc_name(mle_pdisc),
 		ubit_dump(bits, len));
 	switch (mle_pdisc) {
 	case TMLE_PDISC_MM:
@@ -116,6 +116,20 @@ static int rx_tm_sdu(uint8_t *bits, unsigned int len)
 		break;
 	default:
 		break;
+	}
+	return len;
+}
+
+static int rx_tm_sdu(uint8_t *bits, unsigned int len)
+{
+	struct tetra_llc_pdu lpp;
+
+	memset(&lpp, 0, sizeof(lpp));
+	tetra_llc_pdu_parse(&lpp, bits, len);
+
+	printf("TM-SDU(%s): ", tetra_get_llc_pdut_dec_name(lpp.pdu_type));
+	if (lpp.tl_sdu) {
+		rx_tl_sdu(lpp.tl_sdu, lpp.tl_sdu_len);
 	}
 	return len;
 }
