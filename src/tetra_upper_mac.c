@@ -127,8 +127,9 @@ static int rx_tm_sdu(uint8_t *bits, unsigned int len)
 	memset(&lpp, 0, sizeof(lpp));
 	tetra_llc_pdu_parse(&lpp, bits, len);
 
-	printf("TM-SDU(%s): ", tetra_get_llc_pdut_dec_name(lpp.pdu_type));
-	if (lpp.tl_sdu) {
+	printf("TM-SDU(%s,%u,%u): ",
+		tetra_get_llc_pdut_dec_name(lpp.pdu_type), lpp.ns, lpp.ss);
+	if (lpp.tl_sdu && lpp.ss == 0) {
 		rx_tl_sdu(lpp.tl_sdu, lpp.tl_sdu_len);
 	}
 	return len;
@@ -147,6 +148,9 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp)
 		rsd.encryption_mode, rsd.macpdu_length,
 		tetra_addr_dump(&rsd.addr));
 
+	if (rsd.addr.type == ADDR_TYPE_NULL)
+		goto out;
+
 	if (rsd.chan_alloc_pres)
 		printf("ChanAlloc=%s ", tetra_alloc_dump(&rsd.cad));
 
@@ -162,6 +166,7 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp)
 		rx_tm_sdu(tup->mac_block + tmpdu_offset, len_bits);
 	}
 
+out:
 	printf("\n");
 }
 
