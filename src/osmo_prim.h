@@ -14,6 +14,7 @@ struct osmo_prim_hdr {
 	uint16_t sap;
 	uint16_t primitive;
 	enum osmo_prim_operation operation;
+	struct msgb *msg;	/* message containing associated data */
 };
 
 #endif

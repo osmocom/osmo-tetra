@@ -24,6 +24,8 @@
 #include <unistd.h>
 
 #include <osmocom/core/utils.h>
+#include <osmocom/core/msgb.h>
+#include <osmocom/core/talloc.h>
 
 #include <tetra_common.h>
 #include <tetra_tdma.h>
@@ -126,8 +128,8 @@ struct tetra_tmvsap_prim *tmvsap_prim_alloc(uint16_t prim, uint8_t op)
 {
 	struct tetra_tmvsap_prim *ttp;
 
-	//ttp = talloc_zero(NULL, struct tetra_tmvsap_prim);
-	ttp = calloc(1, sizeof(struct tetra_tmvsap_prim));
+	ttp = talloc_zero(NULL, struct tetra_tmvsap_prim);
+	ttp->oph.msg = msgb_alloc(412, "tmvsap_prim");
 	ttp->oph.sap = TETRA_SAP_TMV;
 	ttp->oph.primitive = prim;
 	ttp->oph.operation = op;
@@ -151,8 +153,11 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 	struct tetra_tmvsap_prim *ttp;
 	struct tmv_unitdata_param *tup;
 
+	struct msgb *msg;
+
 	ttp = tmvsap_prim_alloc(PRIM_TMV_UNITDATA, PRIM_OP_INDICATION);
 	tup = &ttp->u.unitdata;
+	msg = ttp->oph.msg;
 
 	/* update the cell time */
 	memcpy(&tcd->time, &t_phy_state.time, sizeof(tcd->time));
@@ -204,10 +209,16 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 				ubit_dump(type2, tbp->type1_bits));
 		} else
 			printf("WRONG\n");
+	} else if (type == TPSAP_T_BBK) {
+		/* FIXME: RM3014-decode */
+		tup->crc_ok = 1;
+		memcpy(type2, type4, tbp->type2_bits);
+		DEBUGP("%s %s type1: %s\n", tbp->name, time_str,
+			ubit_dump(type2, tbp->type1_bits));
 	}
 
-	memcpy(tup->mac_block, type2, tbp->type1_bits);
-	tup->mac_block_len = tbp->type1_bits;
+	msg->l1h = msgb_put(msg, tbp->type1_bits);
+	memcpy(msg->l1h, type2, tbp->type1_bits);
 
 	switch (type) {
 	case TPSAP_T_SB1:
@@ -235,10 +246,6 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 		/* FIXME: do something */
 		break;
 	case TPSAP_T_BBK:
-		/* FIXME: RM3014-decode */
-		tup->crc_ok = 1;
-		memcpy(tup->mac_block, type4, tbp->type1_bits);
-		DEBUGP("%s %s type1: %s\n", tbp->name, time_str, ubit_dump(tup->mac_block, tbp->type1_bits));
 		tup->lchan = TETRA_LC_AACH;
 		break;
 	case TPSAP_T_SCH_F:

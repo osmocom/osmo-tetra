@@ -24,6 +24,8 @@
 #include <unistd.h>
 
 #include <osmocom/core/utils.h>
+#include <osmocom/core/msgb.h>
+#include <osmocom/core/talloc.h>
 
 #include "tetra_common.h"
 #include "tetra_prim.h"
@@ -41,13 +43,13 @@ static struct tetra_si_decoded g_last_sid;
 
 static void rx_bcast(struct tetra_tmvsap_prim *tmvp)
 {
-	struct tmv_unitdata_param *tup = &tmvp->u.unitdata;
+	struct msgb *msg = tmvp->oph.msg;
 	struct tetra_si_decoded sid;
 	uint32_t dl_freq, ul_freq;
 	int i;
 
 	memset(&sid, 0, sizeof(sid));
-	macpdu_decode_sysinfo(&sid, tup->mac_block);
+	macpdu_decode_sysinfo(&sid, msg->l1h);
 
 	dl_freq = tetra_dl_carrier_hz(sid.freq_band,
 				      sid.main_carrier,
@@ -137,12 +139,13 @@ static int rx_tm_sdu(uint8_t *bits, unsigned int len)
 
 static void rx_resrc(struct tetra_tmvsap_prim *tmvp)
 {
-	struct tmv_unitdata_param *tup = &tmvp->u.unitdata;
+	struct msgb *msg = tmvp->oph.msg;
 	struct tetra_resrc_decoded rsd;
 	int tmpdu_offset;
 
 	memset(&rsd, 0, sizeof(rsd));
-	tmpdu_offset = macpdu_decode_resource(&rsd, tup->mac_block);
+	tmpdu_offset = macpdu_decode_resource(&rsd, msg->l1h);
+	msg->l2h = msg->l1h + tmpdu_offset;
 
 	printf("RESOURCE Encr=%u, Length=%d Addr=%s ",
 		rsd.encryption_mode, rsd.macpdu_length,
@@ -160,10 +163,9 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp)
 
 	if (rsd.macpdu_length > 0 && rsd.encryption_mode == 0) {
 		int len_bits = rsd.macpdu_length*8;
-		if (tup->mac_block + tmpdu_offset + len_bits >
-					tup->mac_block + tup->mac_block_len)
-			len_bits = tup->mac_block_len - tmpdu_offset;
-		rx_tm_sdu(tup->mac_block + tmpdu_offset, len_bits);
+		if (msg->l2h + len_bits > msg->l1h + msgb_l1len(msg))
+			len_bits = msgb_l1len(msg) - tmpdu_offset;
+		rx_tm_sdu(msg->l2h, len_bits);
 	}
 
 out:
@@ -172,16 +174,17 @@ out:
 
 static void rx_suppl(struct tetra_tmvsap_prim *tmvp)
 {
-	struct tmv_unitdata_param *tup = &tmvp->u.unitdata;
+	//struct tmv_unitdata_param *tup = &tmvp->u.unitdata;
+	struct msgb *msg = tmvp->oph.msg;
 	//struct tetra_suppl_decoded sud;
 	int tmpdu_offset;
 
 #if 0
 	memset(&sud, 0, sizeof(sud));
-	tmpdu_offset = macpdu_decode_suppl(&sud, tup->mac_block, tup->lchan);
+	tmpdu_offset = macpdu_decode_suppl(&sud, msg->l1h, tup->lchan);
 #else
 	{
-		uint8_t slot_granting = *(tup->mac_block + 17);
+		uint8_t slot_granting = *(msg->l1h + 17);
 		if (slot_granting)
 			tmpdu_offset = 17+1+8;
 		else
@@ -192,7 +195,7 @@ static void rx_suppl(struct tetra_tmvsap_prim *tmvp)
 	printf("SUPPLEMENTARY MAC-D-BLOCK ");
 
 	//if (sud.encryption_mode == 0)
-		rx_tm_sdu(tup->mac_block + tmpdu_offset, 100);
+		rx_tm_sdu(msg->l1h + tmpdu_offset, 100);
 
 	printf("\n");
 }
@@ -210,7 +213,7 @@ static void rx_aach(struct tetra_tmvsap_prim *tmvp)
 	printf("ACCESS-ASSIGN PDU: ");
 
 	memset(&aad, 0, sizeof(aad));
-	macpdu_decode_access_assign(&aad, tup->mac_block,
+	macpdu_decode_access_assign(&aad, tmvp->oph.msg->l1h,
 				    tup->tdma_time.fn == 18 ? 1 : 0);
 
 	if (aad.pres & TETRA_ACC_ASS_PRES_ACCESS1)
@@ -228,7 +231,8 @@ static void rx_aach(struct tetra_tmvsap_prim *tmvp)
 static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp)
 {
 	struct tmv_unitdata_param *tup = &tmvp->u.unitdata;
-	uint8_t pdu_type = bits_to_uint(tup->mac_block, 2);
+	struct msgb *msg = tmvp->oph.msg;
+	uint8_t pdu_type = bits_to_uint(msg->l1h, 2);
 	const char *pdu_name;
 	struct msgb *gsmtap_msg;
 
@@ -237,7 +241,7 @@ static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp)
 	else if (tup->lchan == TETRA_LC_AACH)
 		pdu_name = "ACCESS-ASSIGN";
 	else {
-		pdu_type = bits_to_uint(tup->mac_block, 2);
+		pdu_type = bits_to_uint(msg->l1h, 2);
 		pdu_name = tetra_get_macpdu_name(pdu_type);
 	}
 
@@ -249,8 +253,10 @@ static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp)
 	if (!tup->crc_ok)
 		return 0;
 
-	gsmtap_msg = tetra_gsmtap_makemsg(&tup->tdma_time, tup->lchan, tup->tdma_time.tn,
-					  /* FIXME: */ 0, 0, 0, tup->mac_block, tup->mac_block_len);
+	gsmtap_msg = tetra_gsmtap_makemsg(&tup->tdma_time, tup->lchan,
+					  tup->tdma_time.tn,
+					  /* FIXME: */ 0, 0, 0,
+					msg->l1h, msgb_l1len(msg));
 	if (gsmtap_msg)
 		tetra_gsmtap_sendmsg(gsmtap_msg);
 
@@ -272,9 +278,9 @@ static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp)
 			rx_suppl(tmvp);
 			break;
 		case TETRA_PDU_T_MAC_FRAG_END:
-			if (tup->mac_block[3] == TETRA_MAC_FRAGE_FRAG) {
+			if (msg->l1h[3] == TETRA_MAC_FRAGE_FRAG) {
 				printf("FRAG/END FRAG: ");
-				rx_tm_sdu(tup->mac_block+4, 100 /*FIXME*/);
+				rx_tm_sdu(msg->l1h+4, 100 /*FIXME*/);
 				printf("\n");
 			} else
 				printf("FRAG/END END\n");
@@ -309,7 +315,8 @@ int upper_mac_prim_recv(struct osmo_prim_hdr *op, void *priv)
 		break;
 	}
 
-	free(op);
+	talloc_free(op->msg);
+	talloc_free(op);
 
 	return rc;
 }
