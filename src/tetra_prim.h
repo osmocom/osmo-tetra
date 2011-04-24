@@ -23,13 +23,12 @@ enum tmv_sap_prim {
 
 /* Table 23.2 */
 struct tmv_unitdata_param {
-	uint32_t mac_block_len;
-	enum tetra_log_chan lchan;
-	int crc_ok;
-	uint32_t scrambling_code;
-	struct tetra_tdma_time tdma_time;
-	uint8_t mac_block[412];		/* maximum length of bits in a non-QAM chan */
-};
+	uint32_t mac_block_len;		/* length of mac block */
+	enum tetra_log_chan lchan;	/* to which lchan do we belong? */
+	int crc_ok;			/* was the CRC verified OK? */
+	uint32_t scrambling_code;	/* which scrambling code was used */
+	struct tetra_tdma_time tdma_time;/* TDMA timestamp  */
+	uint8_t mac_block[412];		/* maximum num of bits in a non-QAM chan */ };
 
 /* Table 23.3 */
 struct tmv_configure_param {
