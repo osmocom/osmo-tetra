@@ -114,8 +114,8 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp)
 	memset(&rsd, 0, sizeof(rsd));
 	tmpdu_offset = macpdu_decode_resource(&rsd, tup->mac_block);
 
-	printf("RESOURCE Encr=%u, Length_ind=%u Addr=%s ",
-		rsd.encryption_mode, rsd.length_ind,
+	printf("RESOURCE Encr=%u, Length=%d Addr=%s ",
+		rsd.encryption_mode, rsd.macpdu_length,
 		tetra_addr_dump(&rsd.addr));
 
 	if (rsd.chan_alloc_pres)
@@ -125,8 +125,8 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp)
 		printf("SlotGrant=%u/%u\n", rsd.slot_granting.nr_slots,
 			rsd.slot_granting.delay);
 
-	if (rsd.length_ind && rsd.encryption_mode == 0) {
-		int len_bits = rsd.length_ind*8;
+	if (rsd.macpdu_length > 0 && rsd.encryption_mode == 0) {
+		int len_bits = rsd.macpdu_length*8;
 		if (tup->mac_block + tmpdu_offset + len_bits >
 					tup->mac_block + tup->mac_block_len)
 			len_bits = tup->mac_block_len - tmpdu_offset;

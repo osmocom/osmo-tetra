@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include <osmocom/core/utils.h>
 
@@ -140,6 +141,28 @@ static int decode_nr_slots(uint8_t in)
 	return dec_tbl[in & 0xf];
 }
 
+#define MACPDU_LEN_2ND_STOLEN	-1
+#define MACPDU_LEN_START_FRAG	-2
+
+static int decode_length(unsigned int length_ind)
+{
+	/* FIXME: Y2/Z2 for non-pi4 DQPSK */
+	unsigned int y2 = 1, z2 = 1;
+
+	if (length_ind == 0 || length_ind == 0x3b || length_ind == 0x3c)
+		return -EINVAL;
+	else if (length_ind <= 0x12)
+		return y2 * length_ind;
+	else if (length_ind <= 0x3a)
+		return (18 * y2 + (length_ind - 18) * z2);
+	else if (length_ind == 0x3e)
+		return MACPDU_LEN_2ND_STOLEN;
+	else if (length_ind == 0x3f)
+		return MACPDU_LEN_START_FRAG;
+	else
+		return -EINVAL;
+}
+
 /* Section 21.4.3.1 MAC-RESOURCE */
 int macpdu_decode_resource(struct tetra_resrc_decoded *rsd, const uint8_t *bits)
 {
@@ -147,8 +170,7 @@ int macpdu_decode_resource(struct tetra_resrc_decoded *rsd, const uint8_t *bits)
 
 	rsd->encryption_mode = bits_to_uint(cur, 2); cur += 2;
 	rsd->rand_acc_flag = *cur++;
-	/* FIXME: Y2/... octet calculation */
-	rsd->length_ind = bits_to_uint(cur, 6); cur += 6;
+	rsd->macpdu_length = decode_length(bits_to_uint(cur, 6)); cur += 6;
 	rsd->addr.type = bits_to_uint(cur, 3); cur += 3;
 	switch (rsd->addr.type) {
 	case ADDR_TYPE_NULL:

@@ -202,7 +202,7 @@ struct tetra_addr {
 struct tetra_resrc_decoded {
 	uint8_t encryption_mode;
 	uint8_t rand_acc_flag;
-	uint8_t length_ind;
+	int macpdu_length;
 	struct tetra_addr addr;
 
 	uint8_t power_control_pres;
