@@ -76,6 +76,7 @@ const char *tetra_alloc_dump(const struct tetra_chan_alloc_decoded *cad)
 	cur += sprintf(cur, "%s (TN%u/%s/%uHz)",
 		tetra_get_alloc_t_name(cad->type), cad->timeslot,
 		tetra_get_ul_dl_name(cad->ul_dl),
+		/* FIXME: what if ext_carr_pres == 0? */
 		tetra_dl_carrier_hz(cad->ext_carr.freq_band, cad->carrier_nr,
 				    cad->ext_carr.freq_offset));
 
@@ -119,6 +120,10 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp)
 
 	if (rsd.chan_alloc_pres)
 		printf("ChanAlloc=%s ", tetra_alloc_dump(&rsd.cad));
+
+	if (rsd.slot_granting.pres)
+		printf("SlotGrant=%u/%u\n", rsd.slot_granting.nr_slots,
+			rsd.slot_granting.delay);
 
 	if (rsd.length_ind && rsd.encryption_mode == 0) {
 		int len_bits = rsd.length_ind*8;
