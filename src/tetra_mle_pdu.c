@@ -27,7 +27,7 @@ static const struct value_string mle_pdisc_names[] = {
 	{ TMLE_PDISC_MM,	"MM" },
 	{ TMLE_PDISC_CMCE,	"CMCE" },
 	{ TMLE_PDISC_SNDCP,	"SNDCP" },
-	{ TMLE_PDUSC_MLE,	"MLE" },
+	{ TMLE_PDISC_MLE,	"MLE" },
 	{ TMLE_PDISC_MGMT,	"MGMT" },
 	{ TMLE_PDISC_TEST,	"TEST" },
 	{ 0, NULL }
@@ -35,4 +35,20 @@ static const struct value_string mle_pdisc_names[] = {
 const char *tetra_get_mle_pdisc_name(uint8_t pdisc)
 {
 	return get_value_string(mle_pdisc_names, pdisc);
+}
+
+static const struct value_string mle_pdut_d_names[] = {
+	{ TMLE_PDUT_D_NEW_CELL,		"D-NEW CELL" },
+	{ TMLE_PDUT_D_PREPARE_FAIL,	"D-PREPARE FAIL" },
+	{ TMLE_PDUT_D_NWRK_BROADCAST,	"D-NWRK BROADCAST" },
+	{ TMLE_PDUT_D_NWRK_BROADCAST_EXT, "D-NWRK BROADCAST EXT" },
+	{ TMLE_PDUT_D_RESTORE_ACK,	"D-RESTORE ACK" },
+	{ TMLE_PDUT_D_RESTORE_FAIL,	"D-RESTORE FAIL" },
+	{ TMLE_PDUT_D_CHANNEL_RESPONSE,	"D-CHANNEL RESPONSE" },
+	{ 0, NULL }
+};
+const char *tetra_get_mle_pdut_name(unsigned int pdut, int uplink)
+{
+	/* FIXME: uplink */
+	return get_value_string(mle_pdut_d_names, pdut);
 }
