@@ -163,7 +163,7 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 		printf("BNCH FOLLOWS\n");
 	}
 
-	printf("%s %s type5: %s\n", tbp->name, tetra_tdma_time_dump(&tcd->time),
+	DEBUGP("%s %s type5: %s\n", tbp->name, tetra_tdma_time_dump(&tcd->time),
 		ubit_dump(bits, tbp->type345_bits));
 
 	/* De-scramble, pay special attention to SB1 pre-defined scrambling */
@@ -176,21 +176,21 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 		tup->scrambling_code = tcd->scramb_init;
 	}
 
-	printf("%s %s type4: %s\n", tbp->name, time_str,
+	DEBUGP("%s %s type4: %s\n", tbp->name, time_str,
 		ubit_dump(type4, tbp->type345_bits));
 
 	if (tbp->interleave_a) {
 		/* Run block deinterleaving: type-3 bits */
 		block_deinterleave(tbp->type345_bits, tbp->interleave_a, type4, type3);
-		printf("%s %s type3: %s\n", tbp->name, time_str,
+		DEBUGP("%s %s type3: %s\n", tbp->name, time_str,
 			ubit_dump(type3, tbp->type345_bits));
 		/* De-puncture */
 		memset(type3dp, 0xff, sizeof(type3dp));
 		tetra_rcpc_depunct(TETRA_RCPC_PUNCT_2_3, type3, tbp->type345_bits, type3dp);
-		printf("%s %s type3dp: %s\n", tbp->name, time_str,
+		DEBUGP("%s %s type3dp: %s\n", tbp->name, time_str,
 			ubit_dump(type3dp, tbp->type2_bits*4));
 		viterbi_dec_sb1_wrapper(type3dp, type2, tbp->type2_bits);
-		printf("%s %s type2: %s\n", tbp->name, time_str,
+		DEBUGP("%s %s type2: %s\n", tbp->name, time_str,
 			ubit_dump(type2, tbp->type2_bits));
 	}
 
@@ -238,7 +238,7 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 		/* FIXME: RM3014-decode */
 		tup->crc_ok = 1;
 		memcpy(tup->mac_block, type4, tbp->type1_bits);
-		printf("%s %s type1: %s\n", tbp->name, time_str, ubit_dump(tup->mac_block, tbp->type1_bits));
+		DEBUGP("%s %s type1: %s\n", tbp->name, time_str, ubit_dump(tup->mac_block, tbp->type1_bits));
 		tup->lchan = TETRA_LC_AACH;
 		break;
 	case TPSAP_T_SCH_F:
