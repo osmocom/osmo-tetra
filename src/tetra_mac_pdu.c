@@ -116,6 +116,30 @@ static int decode_chan_alloc(struct tetra_chan_alloc_decoded *cad, const uint8_t
 	return cur - bits;
 }
 
+/* According to table 21.90 */
+static int decode_nr_slots(uint8_t in)
+{
+	const uint8_t dec_tbl[] = {
+		[0x0]	= 0,	/* first sub-slot */
+		[0x1]	= 1,
+		[0x2]	= 2,
+		[0x3]	= 3,
+		[0x4]	= 4,
+		[0x5]	= 5,
+		[0x6]	= 6,
+		[0x7]	= 8,
+		[0x8]	= 10,
+		[0x9]	= 13,
+		[0xa]	= 17,
+		[0xb]	= 24,
+		[0xc]	= 34,
+		[0xd]	= 51,
+		[0xe]	= 68,
+		[0xf]	= 0xff	/* second sub-slot */
+	};
+	return dec_tbl[in & 0xf];
+}
+
 /* Section 21.4.3.1 MAC-RESOURCE */
 int macpdu_decode_resource(struct tetra_resrc_decoded *rsd, const uint8_t *bits)
 {
@@ -128,6 +152,7 @@ int macpdu_decode_resource(struct tetra_resrc_decoded *rsd, const uint8_t *bits)
 	rsd->addr.type = bits_to_uint(cur, 3); cur += 3;
 	switch (rsd->addr.type) {
 	case ADDR_TYPE_NULL:
+		return 0;
 		break;
 	case ADDR_TYPE_SSI:
 	case ADDR_TYPE_USSI:
@@ -148,16 +173,26 @@ int macpdu_decode_resource(struct tetra_resrc_decoded *rsd, const uint8_t *bits)
 		break;
 	}
 	cur += addr_len_by_type[rsd->addr.type];
-	/* no intermediate mapping in pi/4 */
+	/* no intermediate napping in pi/4 */
 	rsd->power_control_pres = *cur++;
 	if (rsd->power_control_pres)
 		cur += 4;
-	rsd->slot_granting_pres = *cur++;
-	if (rsd->slot_granting_pres) {
-		if (*cur++)
+	rsd->slot_granting.pres = *cur++;
+	if (rsd->slot_granting.pres) {
+#if 0
+		/* check for multiple slot granting flag (can only exist in QAM) */
+		if (*cur++) {
 			cur += 0; //FIXME;
-		else
-			cur += 8;
+		} else {
+#endif
+			rsd->slot_granting.nr_slots =
+				decode_nr_slots(bits_to_uint(cur, 4));
+			cur += 4;
+			rsd->slot_granting.delay = bits_to_uint(cur, 4);
+			cur += 4;
+#if 0
+		}
+#endif
 	}
 	rsd->chan_alloc_pres = *cur++;
 	/* FIXME: If encryption is enabled, Channel Allocation is encrypted !!! */

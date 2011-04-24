@@ -207,7 +207,11 @@ struct tetra_resrc_decoded {
 
 	uint8_t power_control_pres;
 
-	uint8_t slot_granting_pres;
+	struct {
+		uint8_t nr_slots;
+		uint8_t delay;
+		uint8_t pres;
+	} slot_granting;
 
 	uint8_t chan_alloc_pres;
 	struct tetra_chan_alloc_decoded cad;
