@@ -136,6 +136,33 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp)
 	printf("\n");
 }
 
+static void rx_suppl(struct tetra_tmvsap_prim *tmvp)
+{
+	struct tmv_unitdata_param *tup = &tmvp->u.unitdata;
+	//struct tetra_suppl_decoded sud;
+	int tmpdu_offset;
+
+#if 0
+	memset(&sud, 0, sizeof(sud));
+	tmpdu_offset = macpdu_decode_suppl(&sud, tup->mac_block, tup->lchan);
+#else
+	{
+		uint8_t slot_granting = *(tup->mac_block + 17);
+		if (slot_granting)
+			tmpdu_offset = 17+1+8;
+		else
+			tmpdu_offset = 17+1;
+	}
+#endif
+
+	printf("SUPPLEMENTARY MAC-D-BLOCK ");
+
+	//if (sud.encryption_mode == 0)
+		rx_tm_sdu(tup->mac_block + tmpdu_offset, 100);
+
+	printf("\n");
+}
+
 static void dump_access(struct tetra_access_field *acc, unsigned int num)
 {
 	printf("ACCESS%u: %c/%u ", num, 'A'+acc->access_code, acc->base_frame_len);
@@ -200,18 +227,30 @@ static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp)
 	case TETRA_LC_BNCH:
 	case TETRA_LC_UNKNOWN:
 	case TETRA_LC_SCH_F:
-		if (pdu_type == TETRA_PDU_T_BROADCAST)
+		switch (pdu_type) {
+		case TETRA_PDU_T_BROADCAST:
 			rx_bcast(tmvp);
-		if (pdu_type == TETRA_PDU_T_MAC_RESOURCE)
+			break;
+		case TETRA_PDU_T_MAC_RESOURCE:
 			rx_resrc(tmvp);
-		break;
-	}
-	if (pdu_type == TETRA_PDU_T_MAC_FRAG_END) {
-		if (tup->mac_block[3] == TETRA_MAC_FRAGE_FRAG) {
-			printf("FRAG/END FRAG: ");
-			rx_tm_sdu(tup->mac_block+4, 100 /*FIXME*/);
-			printf("\n");
+			break;
+		case TETRA_PDU_T_MAC_SUPPL:
+			rx_suppl(tmvp);
+			break;
+		case TETRA_PDU_T_MAC_FRAG_END:
+			if (tup->mac_block[3] == TETRA_MAC_FRAGE_FRAG) {
+				printf("FRAG/END FRAG: ");
+				rx_tm_sdu(tup->mac_block+4, 100 /*FIXME*/);
+				printf("\n");
+			}
+			break;
 		}
+		break;
+	case TETRA_LC_BSCH:
+		break;
+	default:
+		printf("STRANGE lchan=%u\n", tup->lchan);
+		break;
 	}
 
 	return 0;
