@@ -22,7 +22,7 @@
 static void Usage(char *name)
 {
   fprintf(stderr, "Create: %s [-b] [-u owner] [-g group] [-t device-name] "
-	  "[-f tun-clone-device]\n", name);
+	  "[-f tun-clone-device] [ -U ]\n", name);
   fprintf(stderr, "Delete: %s -d device-name [-f tun-clone-device]\n\n",
 	  name);
   fprintf(stderr, "The default tun clone device is /dev/net/tun - some systems"
@@ -40,8 +40,9 @@ int main(int argc, char **argv)
   gid_t group = -1;
   int tap_fd, opt, delete = 0, brief = 0;
   char *tun = "", *file = "/dev/net/tun", *name = argv[0], *end;
+  unsigned int iff_type = IFF_TAP;
 
-  while((opt = getopt(argc, argv, "bd:f:t:u:g:")) > 0){
+  while((opt = getopt(argc, argv, "bd:f:t:u:g:U")) > 0){
     switch(opt) {
       case 'b':
         brief = 1;
@@ -83,6 +84,9 @@ int main(int argc, char **argv)
       case 't':
         tun = optarg;
         break;
+      case 'U':
+        iff_type = IFF_TUN;
+        break;
       case 'h':
       default:
         Usage(name);
@@ -103,7 +107,7 @@ int main(int argc, char **argv)
 
   memset(&ifr, 0, sizeof(ifr));
 
-  ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
+  ifr.ifr_flags = iff_type | IFF_NO_PI;
   strncpy(ifr.ifr_name, tun, sizeof(ifr.ifr_name) - 1);
   if(ioctl(tap_fd, TUNSETIFF, (void *) &ifr) < 0){
     perror("TUNSETIFF");
