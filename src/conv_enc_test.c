@@ -56,19 +56,19 @@ static void decode_schf(const uint8_t *bits)
 	uint8_t type3[1024];
 	uint8_t type2[1024];
 
-	printf("SCH/f type5: %s\n", ubit_dump(bits, 432));
+	printf("SCH/f type5: %s\n", osmo_ubit_dump(bits, 432));
 	memcpy(type4, bits, 432);
 	tetra_scramb_bits(SCRAMB_INIT, type4, 432);
-	printf("SCH/F type4: %s\n", ubit_dump(type4, 432));
+	printf("SCH/F type4: %s\n", osmo_ubit_dump(type4, 432));
 	/* Run (120,11) block deinterleaving: type-3 bits */
 	block_deinterleave(432, 103, type4, type3);
-	printf("SCH/F type3: %s\n", ubit_dump(type3, 432));
+	printf("SCH/F type3: %s\n", osmo_ubit_dump(type3, 432));
 	/* De-puncture */
 	memset(type3dp, 0xff, sizeof(type3dp));
 	tetra_rcpc_depunct(TETRA_RCPC_PUNCT_2_3, type3, 432, type3dp);
-	printf("SCH/F type3dp: %s\n", ubit_dump(type3dp, 288*4));
+	printf("SCH/F type3dp: %s\n", osmo_ubit_dump(type3dp, 288*4));
 	viterbi_dec_sb1_wrapper(type3dp, type2, 288);
-	printf("SCH/F type2: %s\n", ubit_dump(type2, 288));
+	printf("SCH/F type2: %s\n", osmo_ubit_dump(type2, 288));
 
 	{
 		uint16_t crc;
@@ -81,7 +81,7 @@ static void decode_schf(const uint8_t *bits)
 			num_crc_err++;
 		}
 	}
-	printf("SCH/F type1: %s\n", ubit_dump(type2, 268));
+	printf("SCH/F type1: %s\n", osmo_ubit_dump(type2, 268));
 }
 
 /* Build a full 'downlink continuous SYNC burst' from SYSINFO-PDU and SYNC-PDU */
@@ -112,7 +112,7 @@ int build_ndb_schf()
 	/* Append 4 tail bits: type-2 bits */
 	cur += 4;
 
-	printf("SCH/F type2: %s\n", ubit_dump(type2, 288));
+	printf("SCH/F type2: %s\n", osmo_ubit_dump(type2, 288));
 
 	/* Run rate 2/3 RCPC code: type-3 bits*/
 	{
@@ -122,22 +122,22 @@ int build_ndb_schf()
 		get_punctured_rate(TETRA_RCPC_PUNCT_2_3, master, 432, type3);
 		free(ces);
 	}
-	printf("SCH/F type3: %s\n", ubit_dump(type3, 432));
+	printf("SCH/F type3: %s\n", osmo_ubit_dump(type3, 432));
 
 	/* Run (432,103) block interleaving: type-4 bits */
 	block_interleave(432, 103, type3, type4);
-	printf("SCH/F type4: %s\n", ubit_dump(type4, 432));
+	printf("SCH/F type4: %s\n", osmo_ubit_dump(type4, 432));
 
 	/* Run scrambling (all-zero): type-5 bits */
 	memcpy(type5, type4, 432);
 	tetra_scramb_bits(SCRAMB_INIT, type5, 432);
-	printf("SCH/F type5: %s\n", ubit_dump(type5, 432));
+	printf("SCH/F type5: %s\n", osmo_ubit_dump(type5, 432));
 
 	decode_schf(type5);
 
 	/* Use pdu_acc_ass from testpdu.c */
 	/* Run it through (30,14) RM code: type-2=3=4 bits */
-	printf("AACH type-1: %s\n", ubit_dump(pdu_acc_ass, 2));
+	printf("AACH type-1: %s\n", osmo_ubit_dump(pdu_acc_ass, 2));
 	bb_rm3014 = tetra_rm3014_compute(*(uint16_t *)pdu_acc_ass);
 	printf("AACH RM3014: 0x0%x\n", bb_rm3014);
 		/* convert to big endian */
@@ -146,11 +146,11 @@ int build_ndb_schf()
 		bb_rm3014_be <<= 2;
 	osmo_pbit2ubit(bb_type5, (uint8_t *) &bb_rm3014_be, 30);
 	/* Run scrambling (all-zero): type-5 bits */
-	printf("AACH type-5: %s\n", ubit_dump(bb_type5, 30));
+	printf("AACH type-5: %s\n", osmo_ubit_dump(bb_type5, 30));
 
 	/* Finally, hand it into the physical layer */
 	build_norm_c_d_burst(burst, type5, bb_type5, type5+216, 0);
-	printf("cont norm DL burst: %s\n", ubit_dump(burst, 255*2));
+	printf("cont norm DL burst: %s\n", osmo_ubit_dump(burst, 255*2));
 
 	return 0;
 }
@@ -163,19 +163,19 @@ static void decode_sb1(const uint8_t *bits)
 	uint8_t type3[1024];
 	uint8_t type2[1024];
 
-	printf("SB1 type5: %s\n", ubit_dump(bits, 120));
+	printf("SB1 type5: %s\n", osmo_ubit_dump(bits, 120));
 	memcpy(type4, bits, 120);
 	tetra_scramb_bits(SCRAMB_INIT, type4, 120);
-	printf("SB1 type4: %s\n", ubit_dump(type4, 120));
+	printf("SB1 type4: %s\n", osmo_ubit_dump(type4, 120));
 	/* Run (120,11) block deinterleaving: type-3 bits */
 	block_deinterleave(120, 11, type4, type3);
-	printf("SB1 type3: %s\n", ubit_dump(type3, 120));
+	printf("SB1 type3: %s\n", osmo_ubit_dump(type3, 120));
 	/* De-puncture */
 	memset(type3dp, 0xff, sizeof(type3dp));
 	tetra_rcpc_depunct(TETRA_RCPC_PUNCT_2_3, type3, 120, type3dp);
-	printf("SB1 type3dp: %s\n", ubit_dump(type3dp, 80*4));
+	printf("SB1 type3dp: %s\n", osmo_ubit_dump(type3dp, 80*4));
 	viterbi_dec_sb1_wrapper(type3dp, type2, 80);
-	printf("SB1 type2: %s\n", ubit_dump(type2, 80));
+	printf("SB1 type2: %s\n", osmo_ubit_dump(type2, 80));
 
 	{
 		uint16_t crc;
@@ -189,9 +189,9 @@ static void decode_sb1(const uint8_t *bits)
 		}
 	}
 
-	printf("TN %s ", ubit_dump(type2+10, 2));
-	printf("MCC %s ", ubit_dump(type2+31, 10));
-	printf("MNC %s\n", ubit_dump(type2+41, 14));
+	printf("TN %s ", osmo_ubit_dump(type2+10, 2));
+	printf("MCC %s ", osmo_ubit_dump(type2+31, 10));
+	printf("MNC %s\n", osmo_ubit_dump(type2+41, 14));
 }
 
 /* Build a full 'downlink continuous SYNC burst' from SYSINFO-PDU and SYNC-PDU */
@@ -228,7 +228,7 @@ int build_sb()
 	/* Append 4 tail bits: type-2 bits */
 	cur += 4;
 
-	printf("SYNC type2: %s\n", ubit_dump(sb_type2, 80));
+	printf("SYNC type2: %s\n", osmo_ubit_dump(sb_type2, 80));
 
 	/* Run rate 2/3 RCPC code: type-3 bits*/
 	{
@@ -238,16 +238,16 @@ int build_sb()
 		get_punctured_rate(TETRA_RCPC_PUNCT_2_3, sb_master, 120, sb_type3);
 		free(ces);
 	}
-	printf("SYNC type3: %s\n", ubit_dump(sb_type3, 120));
+	printf("SYNC type3: %s\n", osmo_ubit_dump(sb_type3, 120));
 
 	/* Run (120,11) block interleaving: type-4 bits */
 	block_interleave(120, 11, sb_type3, sb_type4);
-	printf("SYNC type4: %s\n", ubit_dump(sb_type4, 120));
+	printf("SYNC type4: %s\n", osmo_ubit_dump(sb_type4, 120));
 
 	/* Run scrambling (all-zero): type-5 bits */
 	memcpy(sb_type5, sb_type4, 120);
 	tetra_scramb_bits(SCRAMB_INIT, sb_type5, 120);
-	printf("SYNC type5: %s\n", ubit_dump(sb_type5, 120));
+	printf("SYNC type5: %s\n", osmo_ubit_dump(sb_type5, 120));
 
 	decode_sb1(sb_type5);
 
@@ -264,7 +264,7 @@ int build_sb()
 	/* Append 4 tail bits: type-2 bits */
 	cur += 4;
 
-	printf("SI type2: %s\n", ubit_dump(si_type2, 140));
+	printf("SI type2: %s\n", osmo_ubit_dump(si_type2, 140));
 
 	/* Run rate 2/3 RCPC code: type-3 bits */
 	{
@@ -274,11 +274,11 @@ int build_sb()
 		get_punctured_rate(TETRA_RCPC_PUNCT_2_3, si_master, 216, si_type3);
 		free(ces);
 	}
-	printf("SI type3: %s\n", ubit_dump(si_type3, 216));
+	printf("SI type3: %s\n", osmo_ubit_dump(si_type3, 216));
 
 	/* Run (216,101) block interleaving: type-4 bits */
 	block_interleave(216, 101, si_type3, si_type4);
-	printf("SI type4: %s\n", ubit_dump(si_type4, 216));
+	printf("SI type4: %s\n", osmo_ubit_dump(si_type4, 216));
 
 	/* Run scrambling (all-zero): type-5 bits */
 	memcpy(si_type5, si_type4, 216);
@@ -286,7 +286,7 @@ int build_sb()
 
 	/* Use pdu_acc_ass from testpdu.c */
 	/* Run it through (30,14) RM code: type-2=3=4 bits */
-	printf("AACH type-1: %s\n", ubit_dump(pdu_acc_ass, 2));
+	printf("AACH type-1: %s\n", osmo_ubit_dump(pdu_acc_ass, 2));
 	bb_rm3014 = tetra_rm3014_compute(*(uint16_t *)pdu_acc_ass);
 	printf("AACH RM3014: 0x0%x\n", bb_rm3014);
 		/* convert to big endian */
@@ -295,11 +295,11 @@ int build_sb()
 		bb_rm3014_be <<= 2;
 	osmo_pbit2ubit(bb_type5, (uint8_t *) &bb_rm3014_be, 30);
 	/* Run scrambling (all-zero): type-5 bits */
-	printf("AACH type-5: %s\n", ubit_dump(bb_type5, 30));
+	printf("AACH type-5: %s\n", osmo_ubit_dump(bb_type5, 30));
 
 	/* Finally, hand it into the physical layer */
 	build_sync_c_d_burst(burst, sb_type5, bb_type5, si_type5);
-	printf("cont sync DL burst: %s\n", ubit_dump(burst, 255*2));
+	printf("cont sync DL burst: %s\n", osmo_ubit_dump(burst, 255*2));
 
 	return 0;
 }

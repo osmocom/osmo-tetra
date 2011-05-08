@@ -56,7 +56,7 @@ void testpdu_init()
 	bitvec_set_uint(&bv, 0, 2);	/* Neighbor cell boradcast: not supported */
 	bitvec_set_uint(&bv, 0, 2);	/* Cell service level: unknown */	
 	bitvec_set_bit(&bv, 0);		/* Late entry information */
-	printf("SYNC PDU: %s\n", hexdump(pdu_sync, sizeof(pdu_sync)));
+	printf("SYNC PDU: %s\n", osmo_hexdump(pdu_sync, sizeof(pdu_sync)));
 
 	memset(&bv, 0, sizeof(bv));
 	bv.data = pdu_sysinfo;
@@ -84,7 +84,7 @@ void testpdu_init()
 	bitvec_set_uint(&bv, 0, 14);	/* Location Area (18.5.9) */
 	bitvec_set_uint(&bv, 0xFFFF, 16);	/* Subscriber Class (18.5.22) */
 	bitvec_set_uint(&bv, 0, 12);	/* BS service details (18.5.2) */
-	printf("SYSINFO PDU: %s\n", hexdump(pdu_sysinfo, sizeof(pdu_sysinfo)));
+	printf("SYSINFO PDU: %s\n", osmo_hexdump(pdu_sysinfo, sizeof(pdu_sysinfo)));
 
 	memset(&bv, 0, sizeof(bv));
 	bv.data = pdu_acc_ass;
@@ -95,5 +95,5 @@ void testpdu_init()
 	bitvec_set_uint(&bv, 0, 2);	/* DL/UL: common only */
 	bitvec_set_uint(&bv, 0, 6);
 	bitvec_set_uint(&bv, 0, 6);
-	printf("ACCESS-ASSIGN PDU: %s\n", hexdump(pdu_acc_ass, sizeof(pdu_acc_ass)));
+	printf("ACCESS-ASSIGN PDU: %s\n", osmo_hexdump(pdu_acc_ass, sizeof(pdu_acc_ass)));
 }

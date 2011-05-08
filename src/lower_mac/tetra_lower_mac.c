@@ -169,7 +169,7 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 	}
 
 	DEBUGP("%s %s type5: %s\n", tbp->name, tetra_tdma_time_dump(&tcd->time),
-		ubit_dump(bits, tbp->type345_bits));
+		osmo_ubit_dump(bits, tbp->type345_bits));
 
 	/* De-scramble, pay special attention to SB1 pre-defined scrambling */
 	memcpy(type4, bits, tbp->type345_bits);
@@ -182,21 +182,21 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 	}
 
 	DEBUGP("%s %s type4: %s\n", tbp->name, time_str,
-		ubit_dump(type4, tbp->type345_bits));
+		osmo_ubit_dump(type4, tbp->type345_bits));
 
 	if (tbp->interleave_a) {
 		/* Run block deinterleaving: type-3 bits */
 		block_deinterleave(tbp->type345_bits, tbp->interleave_a, type4, type3);
 		DEBUGP("%s %s type3: %s\n", tbp->name, time_str,
-			ubit_dump(type3, tbp->type345_bits));
+			osmo_ubit_dump(type3, tbp->type345_bits));
 		/* De-puncture */
 		memset(type3dp, 0xff, sizeof(type3dp));
 		tetra_rcpc_depunct(TETRA_RCPC_PUNCT_2_3, type3, tbp->type345_bits, type3dp);
 		DEBUGP("%s %s type3dp: %s\n", tbp->name, time_str,
-			ubit_dump(type3dp, tbp->type2_bits*4));
+			osmo_ubit_dump(type3dp, tbp->type2_bits*4));
 		viterbi_dec_sb1_wrapper(type3dp, type2, tbp->type2_bits);
 		DEBUGP("%s %s type2: %s\n", tbp->name, time_str,
-			ubit_dump(type2, tbp->type2_bits));
+			osmo_ubit_dump(type2, tbp->type2_bits));
 	}
 
 	if (tbp->have_crc16) {
@@ -206,7 +206,7 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 			printf("OK\n");
 			tup->crc_ok = 1;
 			printf("%s %s type1: %s\n", tbp->name, time_str,
-				ubit_dump(type2, tbp->type1_bits));
+				osmo_ubit_dump(type2, tbp->type1_bits));
 		} else
 			printf("WRONG\n");
 	} else if (type == TPSAP_T_BBK) {
@@ -214,7 +214,7 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 		tup->crc_ok = 1;
 		memcpy(type2, type4, tbp->type2_bits);
 		DEBUGP("%s %s type1: %s\n", tbp->name, time_str,
-			ubit_dump(type2, tbp->type1_bits));
+			osmo_ubit_dump(type2, tbp->type1_bits));
 	}
 
 	msg->l1h = msgb_put(msg, tbp->type1_bits);
@@ -222,12 +222,12 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 
 	switch (type) {
 	case TPSAP_T_SB1:
-		printf("TMB-SAP SYNC CC %s(0x%02x) ", ubit_dump(type2+4, 6), bits_to_uint(type2+4, 6));
-		printf("TN %s(%u) ", ubit_dump(type2+10, 2), bits_to_uint(type2+10, 2));
-		printf("FN %s(%2u) ", ubit_dump(type2+12, 5), bits_to_uint(type2+12, 5));
-		printf("MN %s(%2u) ", ubit_dump(type2+17, 6), bits_to_uint(type2+17, 6));
-		printf("MCC %s(%u) ", ubit_dump(type2+31, 10), bits_to_uint(type2+31, 10));
-		printf("MNC %s(%u)\n", ubit_dump(type2+41, 14), bits_to_uint(type2+41, 14));
+		printf("TMB-SAP SYNC CC %s(0x%02x) ", osmo_ubit_dump(type2+4, 6), bits_to_uint(type2+4, 6));
+		printf("TN %s(%u) ", osmo_ubit_dump(type2+10, 2), bits_to_uint(type2+10, 2));
+		printf("FN %s(%2u) ", osmo_ubit_dump(type2+12, 5), bits_to_uint(type2+12, 5));
+		printf("MN %s(%2u) ", osmo_ubit_dump(type2+17, 6), bits_to_uint(type2+17, 6));
+		printf("MCC %s(%u) ", osmo_ubit_dump(type2+31, 10), bits_to_uint(type2+31, 10));
+		printf("MNC %s(%u)\n", osmo_ubit_dump(type2+41, 14), bits_to_uint(type2+41, 14));
 		/* obtain information from SYNC PDU */
 		tcd->colour_code = bits_to_uint(type2+4, 6);
 		tcd->time.tn = bits_to_uint(type2+10, 2);
