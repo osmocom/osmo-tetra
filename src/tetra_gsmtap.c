@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include <osmocom/core/msgb.h>
 #include <osmocom/core/gsmtap.h>
@@ -12,7 +13,7 @@
 #include "tetra_common.h"
 #include "tetra_tdma.h"
 
-static int gsmtap_fd = -1;
+static struct gsmtap_inst *g_gti = NULL;
 
 static const uint8_t lchan2gsmtap[] = {
 	[TETRA_LC_SCH_F]	= GSMTAP_TETRA_SCH_F,
@@ -61,74 +62,20 @@ struct msgb *tetra_gsmtap_makemsg(struct tetra_tdma_time *tm, enum tetra_log_cha
 
 int tetra_gsmtap_sendmsg(struct msgb *msg)
 {
-	if (gsmtap_fd != -1)
-		return write(gsmtap_fd, msg->data, msg->len);
+	if (g_gti)
+		return gsmtap_sendmsg(g_gti, msg);
 	else
 		return 0;
 }
-
-/* this block should move to libosmocore */
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <errno.h>
-
-int gsmtap_init(const char *host, uint16_t port)
-{
-	struct addrinfo hints, *result, *rp;
-	int sfd, rc;
-	char portbuf[16];
-
-	if (port == 0)
-		port = GSMTAP_UDP_PORT;
-	if (host == NULL)
-		host = "localhost";
-
-	sprintf(portbuf, "%u", port);
-	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_DGRAM;
-	hints.ai_flags = 0;
-	hints.ai_protocol = IPPROTO_UDP;
-
-	rc = getaddrinfo(host, portbuf, &hints, &result);
-	if (rc != 0) {
-		perror("getaddrinfo returned NULL");
-		return -EINVAL;
-	}
-
-	for (rp = result; rp != NULL; rp = rp->ai_next) {
-		printf("creating socket %u, %u, %u\n", rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		if (sfd == -1)
-			continue;
-		if (connect(sfd, rp->ai_addr, rp->ai_addrlen) != -1)
-			break;
-		close(sfd);
-	}
-	freeaddrinfo(result);
-
-	if (rp == NULL) {
-		perror("unable to bind to socket");
-		return -ENODEV;
-	}
-
-	/* FIXME: if host == localhost, bind to another socket and discard data */
-
-	return sfd;
-}
-/* end block for libosmocore */
 
 int tetra_gsmtap_init(const char *host, uint16_t port)
 {
 	int fd;
 
-	fd = gsmtap_init(host, port);
-	if (fd < 0)
-		return fd;
-
-	gsmtap_fd = fd;
+	g_gti = gsmtap_source_init(host, port, 0);
+	if (!g_gti)
+		return -EINVAL;
+	gsmtap_source_add_sink(g_gti);
 
 	return 0;
 }
