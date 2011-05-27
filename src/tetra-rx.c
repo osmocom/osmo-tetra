@@ -58,7 +58,7 @@ int main(int argc, char **argv)
 	tms = talloc_zero(tetra_tall_ctx, struct tetra_mac_state);
 	tetra_mac_state_init(tms);
 
-	trs = calloc(1, sizeof(*trs));
+	trs = talloc_zero(tetra_tall_ctx, struct tetra_rx_state);
 	trs->burst_cb_priv = tms;
 
 	while (1) {
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
 		tetra_burst_sync_in(trs, buf, len);
 	}
 
-	free(trs);
+	talloc_free(trs);
 	talloc_free(tms);
 
 	exit(0);
