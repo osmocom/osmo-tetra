@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include <osmocom/core/linuxlist.h>
+
 #ifdef DEBUG
 #define DEBUGP(x, args...)	printf(x, ## args)
 #else
@@ -39,6 +41,12 @@ struct tetra_phy_state {
 	struct tetra_tdma_time time;
 };
 extern struct tetra_phy_state t_phy_state;
+
+struct tetra_mac_state {
+	struct llist_head voice_channels;
+};
+
+void tetra_mac_state_init(struct tetra_mac_state *tms);
 
 #define TETRA_CRC_OK	0x1d0f
 

@@ -27,16 +27,20 @@
 #include <sys/stat.h>
 
 #include <osmocom/core/utils.h>
+#include <osmocom/core/talloc.h>
 
 #include "tetra_common.h"
 #include <phy/tetra_burst.h>
 #include <phy/tetra_burst_sync.h>
 #include "tetra_gsmtap.h"
 
+void *tetra_tall_ctx;
+
 int main(int argc, char **argv)
 {
 	int fd;
 	struct tetra_rx_state *trs;
+	struct tetra_mac_state *tms;
 
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s <file_with_1_byte_per_bit>\n", argv[0]);
@@ -51,7 +55,11 @@ int main(int argc, char **argv)
 
 	tetra_gsmtap_init("localhost", 0);
 
+	tms = talloc_zero(tetra_tall_ctx, struct tetra_mac_state);
+	tetra_mac_state_init(tms);
+
 	trs = calloc(1, sizeof(*trs));
+	trs->burst_cb_priv = tms;
 
 	while (1) {
 		uint8_t buf[64];
@@ -69,6 +77,7 @@ int main(int argc, char **argv)
 	}
 
 	free(trs);
+	talloc_free(tms);
 
 	exit(0);
 }

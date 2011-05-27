@@ -39,7 +39,6 @@
 #include "tetra_upper_mac.h"
 #include <lower_mac/viterbi.h>
 
-
 struct tetra_blk_param {
 	const char *name;
 	uint16_t type345_bits;
@@ -147,6 +146,7 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 	uint8_t type2[512];
 
 	const struct tetra_blk_param *tbp = &tetra_blk_param[type];
+	struct tetra_mac_state *tms = priv;
 	const char *time_str;
 
 	/* TMV-SAP.UNITDATA.ind primitive which we will send to the upper MAC */
@@ -258,7 +258,7 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 	/* send Rx time along with the TMV-UNITDATA.ind primitive */
 	memcpy(&tup->tdma_time, &tcd->time, sizeof(tup->tdma_time));
 
-	upper_mac_prim_recv(&ttp->oph, NULL);
+	upper_mac_prim_recv(&ttp->oph, tms);
 }
 
 

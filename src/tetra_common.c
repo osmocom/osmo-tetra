@@ -124,3 +124,8 @@ const char *tetra_get_sap_name(uint8_t sap)
 {
 	return get_value_string(tetra_sap_names, sap);
 }
+
+void tetra_mac_state_init(struct tetra_mac_state *tms)
+{
+	INIT_LLIST_HEAD(&tms->voice_channels);
+}

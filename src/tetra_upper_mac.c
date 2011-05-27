@@ -41,7 +41,7 @@
 /* FIXME: this is ugly */
 static struct tetra_si_decoded g_last_sid;
 
-static void rx_bcast(struct tetra_tmvsap_prim *tmvp)
+static void rx_bcast(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms)
 {
 	struct msgb *msg = tmvp->oph.msg;
 	struct tetra_si_decoded sid;
@@ -97,7 +97,7 @@ const char *tetra_alloc_dump(const struct tetra_chan_alloc_decoded *cad)
 	return buf;
 }
 
-static int rx_tl_sdu(uint8_t *bits, unsigned int len)
+static int rx_tl_sdu(struct tetra_mac_state *tms, uint8_t *bits, unsigned int len)
 {
 	uint8_t mle_pdisc = bits_to_uint(bits, 3);
 
@@ -122,7 +122,7 @@ static int rx_tl_sdu(uint8_t *bits, unsigned int len)
 	return len;
 }
 
-static int rx_tm_sdu(uint8_t *bits, unsigned int len)
+static int rx_tm_sdu(struct tetra_mac_state *tms, uint8_t *bits, unsigned int len)
 {
 	struct tetra_llc_pdu lpp;
 
@@ -132,12 +132,12 @@ static int rx_tm_sdu(uint8_t *bits, unsigned int len)
 	printf("TM-SDU(%s,%u,%u): ",
 		tetra_get_llc_pdut_dec_name(lpp.pdu_type), lpp.ns, lpp.ss);
 	if (lpp.tl_sdu && lpp.ss == 0) {
-		rx_tl_sdu(lpp.tl_sdu, lpp.tl_sdu_len);
+		rx_tl_sdu(tms, lpp.tl_sdu, lpp.tl_sdu_len);
 	}
 	return len;
 }
 
-static void rx_resrc(struct tetra_tmvsap_prim *tmvp)
+static void rx_resrc(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms)
 {
 	struct msgb *msg = tmvp->oph.msg;
 	struct tetra_resrc_decoded rsd;
@@ -165,14 +165,14 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp)
 		int len_bits = rsd.macpdu_length*8;
 		if (msg->l2h + len_bits > msg->l1h + msgb_l1len(msg))
 			len_bits = msgb_l1len(msg) - tmpdu_offset;
-		rx_tm_sdu(msg->l2h, len_bits);
+		rx_tm_sdu(tms, msg->l2h, len_bits);
 	}
 
 out:
 	printf("\n");
 }
 
-static void rx_suppl(struct tetra_tmvsap_prim *tmvp)
+static void rx_suppl(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms)
 {
 	//struct tmv_unitdata_param *tup = &tmvp->u.unitdata;
 	struct msgb *msg = tmvp->oph.msg;
@@ -195,7 +195,7 @@ static void rx_suppl(struct tetra_tmvsap_prim *tmvp)
 	printf("SUPPLEMENTARY MAC-D-BLOCK ");
 
 	//if (sud.encryption_mode == 0)
-		rx_tm_sdu(msg->l1h + tmpdu_offset, 100);
+		rx_tm_sdu(tms, msg->l1h + tmpdu_offset, 100);
 
 	printf("\n");
 }
@@ -205,7 +205,7 @@ static void dump_access(struct tetra_access_field *acc, unsigned int num)
 	printf("ACCESS%u: %c/%u ", num, 'A'+acc->access_code, acc->base_frame_len);
 }
 
-static void rx_aach(struct tetra_tmvsap_prim *tmvp)
+static void rx_aach(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms)
 {
 	struct tmv_unitdata_param *tup = &tmvp->u.unitdata;
 	struct tetra_acc_ass_decoded aad;
@@ -228,7 +228,7 @@ static void rx_aach(struct tetra_tmvsap_prim *tmvp)
 	printf("\n");
 }
 
-static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp)
+static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms)
 {
 	struct tmv_unitdata_param *tup = &tmvp->u.unitdata;
 	struct msgb *msg = tmvp->oph.msg;
@@ -262,25 +262,25 @@ static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp)
 
 	switch (tup->lchan) {
 	case TETRA_LC_AACH:
-		rx_aach(tmvp);
+		rx_aach(tmvp, tms);
 		break;
 	case TETRA_LC_BNCH:
 	case TETRA_LC_UNKNOWN:
 	case TETRA_LC_SCH_F:
 		switch (pdu_type) {
 		case TETRA_PDU_T_BROADCAST:
-			rx_bcast(tmvp);
+			rx_bcast(tmvp, tms);
 			break;
 		case TETRA_PDU_T_MAC_RESOURCE:
-			rx_resrc(tmvp);
+			rx_resrc(tmvp, tms);
 			break;
 		case TETRA_PDU_T_MAC_SUPPL:
-			rx_suppl(tmvp);
+			rx_suppl(tmvp, tms);
 			break;
 		case TETRA_PDU_T_MAC_FRAG_END:
 			if (msg->l1h[3] == TETRA_MAC_FRAGE_FRAG) {
 				printf("FRAG/END FRAG: ");
-				rx_tm_sdu(msg->l1h+4, 100 /*FIXME*/);
+				rx_tm_sdu(tms, msg->l1h+4, 100 /*FIXME*/);
 				printf("\n");
 			} else
 				printf("FRAG/END END\n");
@@ -303,12 +303,13 @@ static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp)
 int upper_mac_prim_recv(struct osmo_prim_hdr *op, void *priv)
 {
 	struct tetra_tmvsap_prim *tmvp;
+	struct tetra_mac_state *tms = priv;
 	int rc;
 
 	switch (op->sap) {
 	case TETRA_SAP_TMV:
 		tmvp = (struct tetra_tmvsap_prim *) op;
-		rc = rx_tmv_unitdata_ind(tmvp);
+		rc = rx_tmv_unitdata_ind(tmvp, tms);
 		break;
 	default:
 		printf("primitive on unknown sap\n");
