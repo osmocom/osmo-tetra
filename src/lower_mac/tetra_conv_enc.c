@@ -99,6 +99,7 @@ const uint8_t P_rate1_3[] = { 0, 1, 2, 3, 5, 6, 7 };
 /* Voice */
 const uint8_t P_rate8_12[] = { 0, 1, 2, 4 };
 const uint8_t P_rate8_18[] = { 0, 1, 2, 3, 4, 5, 7, 8, 10, 11 };
+const uint8_t P_rate8_17[] = { 0, 1, 2, 3, 4, 5, 7, 8, 10, 11, 13, 14, 16, 17, 19, 20, 22, 23 };
 
 struct puncturer {
 	enum tetra_rcpc_puncturer type;
@@ -177,6 +178,15 @@ static const struct puncturer punct_72_162 = {
 	.i_func = &i_func_equals,
 };
 
+/* EN 300 395-2 Section 5.6.2.1 */
+static const struct puncturer punct_38_80 = {
+	.type = TETRA_RCPC_PUNCT_72_162,
+	.P = P_rate8_17,
+	.t = 17,
+	.period = 24,
+	.i_func = &i_func_equals,
+};
+
 static const struct puncturer *tetra_puncts[] = {
 	[TETRA_RCPC_PUNCT_2_3]		= &punct_2_3,
 	[TETRA_RCPC_PUNCT_1_3]		= &punct_1_3,
@@ -184,6 +194,7 @@ static const struct puncturer *tetra_puncts[] = {
 	[TETRA_RCPC_PUNCT_148_432]	= &punct_148_432,
 	[TETRA_RCPC_PUNCT_114_171]	= &punct_114_171,
 	[TETRA_RCPC_PUNCT_72_162]	= &punct_72_162,
+	[TETRA_RCPC_PUNCT_38_80]	= &punct_38_80,
 };
 
 /* Puncture the mother code (in) and write 'len' symbols to out */
@@ -252,6 +263,7 @@ static const struct punct_test_param punct_test_params[] = {
 	{ 288, 432, 4, TETRA_RCPC_PUNCT_2_3 },		/* SCH/F */
 	{ 114, 171, 3, TETRA_RCPC_PUNCT_114_171 },	/* Speech class 1 */
 	{ 72, 162, 3, TETRA_RCPC_PUNCT_72_162 },	/* Speech class 2 */
+	{ 38, 80, 3, TETRA_RCPC_PUNCT_38_80 },		/* Speech class 2 in STCH */
 };
 
 static int mother_memcmp(const uint8_t *mother, const uint8_t *depunct, int len)

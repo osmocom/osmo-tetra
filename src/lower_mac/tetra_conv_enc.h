@@ -20,6 +20,7 @@ enum tetra_rcpc_puncturer {
 	TETRA_RCPC_PUNCT_148_432,
 	TETRA_RCPC_PUNCT_114_171,
 	TETRA_RCPC_PUNCT_72_162,
+	TETRA_RCPC_PUNCT_38_80,
 };
 
 /* Puncture the mother code (in) and write 'len' symbols to out */
