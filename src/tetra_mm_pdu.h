@@ -21,6 +21,18 @@ enum tetra_mm_pdu_type_d {
 	TMM_PDU_T_D_MM_PDU_NOTSUPP	= 0xf
 };
 
+/* 16.10.35a Location update accept type */
+enum tetra_mm_loc_upd_acc_type {
+	TMM_LUPD_ACC_T_ROAMING		= 0,
+	TMM_LUPD_ACC_T_TEMPORARY	= 1,
+	TMM_LUPD_ACC_T_PERIODIC		= 2,
+	TMM_LUPD_ACC_T_ITSI_ATT		= 3,
+	TMM_LUPD_ACC_T_CALL_RESTORE	= 4,
+	TMM_LUPD_ACC_T_MIGRATING	= 5,
+	TMM_LUPD_ACC_T_DEMAND		= 6,
+	TMM_LUPD_ACC_T_DISABLED		= 7
+};
+
 const char *tetra_get_mm_pdut_name(uint8_t pdut, int uplink);
 
 #endif
