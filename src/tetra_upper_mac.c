@@ -38,6 +38,8 @@
 #include "tetra_mle_pdu.h"
 #include "tetra_gsmtap.h"
 
+static int rx_tm_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len);
+
 /* FIXME: this is ugly */
 static struct tetra_si_decoded g_last_sid;
 
@@ -97,8 +99,10 @@ const char *tetra_alloc_dump(const struct tetra_chan_alloc_decoded *cad)
 	return buf;
 }
 
-static int rx_tl_sdu(struct tetra_mac_state *tms, uint8_t *bits, unsigned int len)
+/* Receive TL-SDU (LLC SDU == MLE PDU) */
+static int rx_tl_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len)
 {
+	uint8_t *bits = msg->l3h;
 	uint8_t mle_pdisc = bits_to_uint(bits, 3);
 
 	printf("TL-SDU(%s): %s", tetra_get_mle_pdisc_name(mle_pdisc),
@@ -112,6 +116,15 @@ static int rx_tl_sdu(struct tetra_mac_state *tms, uint8_t *bits, unsigned int le
 		break;
 	case TMLE_PDISC_SNDCP:
 		printf(" %s", tetra_get_sndcp_pdut_name(bits_to_uint(bits+3, 4), 0));
+		printf(" NSAPI=%u PCOMP=%u, DCOMP=%u",
+			bits_to_uint(bits+3+4, 4),
+			bits_to_uint(bits+3+4+4, 4),
+			bits_to_uint(bits+3+4+4+4, 4));
+		printf(" V%u, IHL=%u",
+			bits_to_uint(bits+3+4+4+4+4, 4),
+			4*bits_to_uint(bits+3+4+4+4+4+4, 4));
+		printf(" Proto=%u",
+			bits_to_uint(bits+3+4+4+4+4+4+4+64, 8));
 		break;
 	case TMLE_PDISC_MLE:
 		printf(" %s", tetra_get_mle_pdut_name(bits_to_uint(bits+3, 3), 0));
@@ -122,9 +135,10 @@ static int rx_tl_sdu(struct tetra_mac_state *tms, uint8_t *bits, unsigned int le
 	return len;
 }
 
-static int rx_tm_sdu(struct tetra_mac_state *tms, uint8_t *bits, unsigned int len)
+static int rx_tm_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len)
 {
 	struct tetra_llc_pdu lpp;
+	uint8_t *bits = msg->l2h;
 
 	memset(&lpp, 0, sizeof(lpp));
 	tetra_llc_pdu_parse(&lpp, bits, len);
@@ -132,7 +146,8 @@ static int rx_tm_sdu(struct tetra_mac_state *tms, uint8_t *bits, unsigned int le
 	printf("TM-SDU(%s,%u,%u): ",
 		tetra_get_llc_pdut_dec_name(lpp.pdu_type), lpp.ns, lpp.ss);
 	if (lpp.tl_sdu && lpp.ss == 0) {
-		rx_tl_sdu(tms, lpp.tl_sdu, lpp.tl_sdu_len);
+		msg->l3h = lpp.tl_sdu;
+		rx_tl_sdu(tms, msg, lpp.tl_sdu_len);
 	}
 	return len;
 }
@@ -165,7 +180,7 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 		int len_bits = rsd.macpdu_length*8;
 		if (msg->l2h + len_bits > msg->l1h + msgb_l1len(msg))
 			len_bits = msgb_l1len(msg) - tmpdu_offset;
-		rx_tm_sdu(tms, msg->l2h, len_bits);
+		rx_tm_sdu(tms, msg, len_bits);
 	}
 
 out:
@@ -195,7 +210,8 @@ static void rx_suppl(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 	printf("SUPPLEMENTARY MAC-D-BLOCK ");
 
 	//if (sud.encryption_mode == 0)
-		rx_tm_sdu(tms, msg->l1h + tmpdu_offset, 100);
+		msg->l2h = msg->l1h + tmpdu_offset;
+		rx_tm_sdu(tms, msg, 100);
 
 	printf("\n");
 }
@@ -280,7 +296,8 @@ static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_
 		case TETRA_PDU_T_MAC_FRAG_END:
 			if (msg->l1h[3] == TETRA_MAC_FRAGE_FRAG) {
 				printf("FRAG/END FRAG: ");
-				rx_tm_sdu(tms, msg->l1h+4, 100 /*FIXME*/);
+				msg->l2h = msg->l1h+4;
+				rx_tm_sdu(tms, msg, 100 /*FIXME*/);
 				printf("\n");
 			} else
 				printf("FRAG/END END\n");

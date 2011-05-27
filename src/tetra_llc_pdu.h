@@ -1,6 +1,8 @@
 #ifndef TETRA_LLC_PDU_H
 #define TETRA_LLC_PDU_H
 
+#include <osmocom/core/linuxlist.h>
+
 /* Table 21.1 */
 enum tetra_llc_pdu_t {
 	TLLC_PDUT_BL_ADATA		= 0,
@@ -64,17 +66,36 @@ enum tllc_pdut_dec {
 };
 const char *tetra_get_llc_pdut_dec_name(enum tllc_pdut_dec pdut);
 
+/* decoded/parsed PDU with easier encoding */
 struct tetra_llc_pdu {
 	enum tllc_pdut_dec pdu_type;
-	uint8_t nr;
-	uint8_t ns;
-	uint8_t ss;
+	uint8_t nr;		/* N(R) PDU number (receive) */
+	uint8_t ns;		/* N(S) PDU number (sent) */
+	uint8_t ss;		/* S(S) Segment (sent) */
 	uint32_t _fcs;
 	uint32_t *fcs;
 	uint8_t *tl_sdu;	/* pointer to bitbuf */
 	uint8_t tl_sdu_len;	/* in bits */
 };
 
+/* parse a received LLC PDU and parse it into 'lpp' */
 int tetra_llc_pdu_parse(struct tetra_llc_pdu *lpp, uint8_t *buf, int len);
 
+/* TETRA LLC state */
+struct tllc_state {
+	struct llist_head list;
+
+	struct {
+		struct llist_head defrag_list;
+	} rx;
+};
+
+/* entry in the defragmentation queue */
+struct tllc_defrag_q_e {
+	struct llist_head list;
+	unsigned int ns;	/* current de-fragmenting */
+	unsigned int last_ss;	/* last received S(S) */
+
+	struct msgb *tl_sdu;
+};
 #endif /* TETRA_LLC_PDU_H */
