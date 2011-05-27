@@ -57,3 +57,26 @@ void block_deinterleave(uint32_t K, uint32_t a, const uint8_t *in, uint8_t *out)
 		out[i-1] = in[k-1];
 	}
 }
+
+/* EN 300 395-2 Section 5.5.3 Matrix interleaving (voice */
+void matrix_interleave(uint32_t lines, uint32_t columns,
+			const uint8_t *in, uint8_t *out)
+{
+	int i, j;
+
+	for (i = 0; i < columns; i++) {
+		for (j = 0; j < lines; j++)
+			out[i*lines + columns] = in[j*columns + lines];
+	}
+}
+
+void matrix_deinterleave(uint32_t lines, uint32_t columns,
+			 const uint8_t *in, uint8_t *out)
+{
+	int i, j;
+
+	for (i = 0; i < columns; i++) {
+		for (j = 0; j < lines; j++)
+			out[j*columns + lines] = in[i*lines + columns];
+	}
+}

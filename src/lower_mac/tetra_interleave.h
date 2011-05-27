@@ -9,4 +9,9 @@
 void block_interleave(uint32_t K, uint32_t a, const uint8_t *in, uint8_t *out);
 void block_deinterleave(uint32_t K, uint32_t a, const uint8_t *in, uint8_t *out);
 
+void matrix_interleave(uint32_t lines, uint32_t columns,
+			const uint8_t *in, uint8_t *out);
+void matrix_deinterleave(uint32_t lines, uint32_t columns,
+			 const uint8_t *in, uint8_t *out);
+
 #endif /* TETRA_INTERLEAVE_H */
