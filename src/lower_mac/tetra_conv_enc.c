@@ -239,18 +239,19 @@ int tetra_rcpc_depunct(enum tetra_rcpc_puncturer pu, const uint8_t *in, int len,
 struct punct_test_param {
 	uint16_t type2_len;
 	uint16_t type3_len;
+	uint16_t mother_rate;	/* rate 1/3 for speech, 1/4 for data */
 	enum tetra_rcpc_puncturer punct;
 };
 
 static const struct punct_test_param punct_test_params[] = {
-	{ 80, 120, TETRA_RCPC_PUNCT_2_3 },		/* BSCH */
-	{ 292, 432, TETRA_RCPC_PUNCT_292_432 },		/* TCH/4.8 */
-	{ 148, 432, TETRA_RCPC_PUNCT_148_432 },		/* TCH/2.4 */
-	{ 144, 216, TETRA_RCPC_PUNCT_2_3 },		/* SCH/HD, BNCH, STCH */
-	{ 112, 168, TETRA_RCPC_PUNCT_2_3 },		/* SCH/HU */
-	{ 288, 432, TETRA_RCPC_PUNCT_2_3 },		/* SCH/F */
-	{ 114, 171, TETRA_RCPC_PUNCT_114_171 },		/* Speech class 1 */
-	{ 72, 162, TETRA_RCPC_PUNCT_72_162 },		/* Speech class 2 */
+	{ 80, 120, 4, TETRA_RCPC_PUNCT_2_3 },		/* BSCH */
+	{ 292, 432, 4, TETRA_RCPC_PUNCT_292_432 },	/* TCH/4.8 */
+	{ 148, 432, 4, TETRA_RCPC_PUNCT_148_432 },	/* TCH/2.4 */
+	{ 144, 216, 4, TETRA_RCPC_PUNCT_2_3 },		/* SCH/HD, BNCH, STCH */
+	{ 112, 168, 4, TETRA_RCPC_PUNCT_2_3 },		/* SCH/HU */
+	{ 288, 432, 4, TETRA_RCPC_PUNCT_2_3 },		/* SCH/F */
+	{ 114, 171, 3, TETRA_RCPC_PUNCT_114_171 },	/* Speech class 1 */
+	{ 72, 162, 3, TETRA_RCPC_PUNCT_72_162 },	/* Speech class 2 */
 };
 
 static int mother_memcmp(const uint8_t *mother, const uint8_t *depunct, int len)
@@ -274,19 +275,22 @@ static int test_one_punct(const struct punct_test_param *ptp)
 	uint8_t *mother_buf;
 	uint8_t *depunct_buf;
 	uint8_t *type3_buf;
-	int i, mother_len;
+	int i, j, mother_len;
 
 	printf("==> Testing Puncture/Depuncture mode %u (%u/%u)\n",
 		ptp->punct, ptp->type2_len, ptp->type3_len);
 
-	mother_len = ptp->type2_len*4;
+	mother_len = ptp->type2_len * ptp->mother_rate;
 	mother_buf = malloc(mother_len);
-	depunct_buf = malloc(ptp->type2_len*4);
+	depunct_buf = malloc(ptp->type2_len * ptp->mother_rate);
 	type3_buf = malloc(ptp->type3_len);
 
 	/* initialize mother buffer with sequence of bytes starting at 0 */
-	for (i = 0; i < mother_len; i++)
-		mother_buf[i] = i & 0xff;
+	for (i = 0, j = 0; i < mother_len; i++, j++) {
+		if (j == 0xff)
+			j = 0;
+		mother_buf[i] = j;
+	}
 
 	/* puncture the mother_buf to type3_buf using rate 2/3 on 60 bits */
 	get_punctured_rate(ptp->punct, mother_buf, ptp->type3_len, type3_buf);
