@@ -161,8 +161,8 @@ static const struct puncturer punct_148_432 = {
 };
 
 /* EN 300 395-2 Section 5.5.2.1 */
-static const struct puncturer punct_114_171 = {
-	.type = TETRA_RCPC_PUNCT_114_171,
+static const struct puncturer punct_112_168 = {
+	.type = TETRA_RCPC_PUNCT_112_168,
 	.P = P_rate8_12,
 	.t = 3,
 	.period = 6,
@@ -192,7 +192,7 @@ static const struct puncturer *tetra_puncts[] = {
 	[TETRA_RCPC_PUNCT_1_3]		= &punct_1_3,
 	[TETRA_RCPC_PUNCT_292_432]	= &punct_292_432,
 	[TETRA_RCPC_PUNCT_148_432]	= &punct_148_432,
-	[TETRA_RCPC_PUNCT_114_171]	= &punct_114_171,
+	[TETRA_RCPC_PUNCT_112_168]	= &punct_112_168,
 	[TETRA_RCPC_PUNCT_72_162]	= &punct_72_162,
 	[TETRA_RCPC_PUNCT_38_80]	= &punct_38_80,
 };
@@ -261,7 +261,7 @@ static const struct punct_test_param punct_test_params[] = {
 	{ 144, 216, 4, TETRA_RCPC_PUNCT_2_3 },		/* SCH/HD, BNCH, STCH */
 	{ 112, 168, 4, TETRA_RCPC_PUNCT_2_3 },		/* SCH/HU */
 	{ 288, 432, 4, TETRA_RCPC_PUNCT_2_3 },		/* SCH/F */
-	{ 114, 171, 3, TETRA_RCPC_PUNCT_114_171 },	/* Speech class 1 */
+	{ 112, 168, 3, TETRA_RCPC_PUNCT_112_168 },	/* Speech class 1 */
 	{ 72, 162, 3, TETRA_RCPC_PUNCT_72_162 },	/* Speech class 2 */
 	{ 38, 80, 3, TETRA_RCPC_PUNCT_38_80 },		/* Speech class 2 in STCH */
 };
