@@ -96,10 +96,15 @@ int conv_enc_init(struct conv_enc_state *ces)
 const uint8_t P_rate2_3[] = { 0, 1, 2, 5 };
 const uint8_t P_rate1_3[] = { 0, 1, 2, 3, 5, 6, 7 };
 
+/* Voice */
+const uint8_t P_rate8_12[] = { 0, 1, 2, 4 };
+const uint8_t P_rate8_18[] = { 0, 1, 2, 3, 4, 5, 7, 8, 10, 11 };
+
 struct puncturer {
 	enum tetra_rcpc_puncturer type;
 	const uint8_t *P;
 	uint8_t t;
+	uint8_t period;
 	uint32_t (*i_func)(uint32_t j);
 };
 
@@ -123,6 +128,7 @@ static const struct puncturer punct_2_3 = {
 	.type = TETRA_RCPC_PUNCT_2_3,
 	.P = P_rate2_3,
 	.t = 3,
+	.period = 8,
 	.i_func = &i_func_equals,
 };
 
@@ -131,6 +137,7 @@ static const struct puncturer punct_1_3 = {
 	.type = TETRA_RCPC_PUNCT_1_3,
 	.P = P_rate1_3,
 	.t = 6,
+	.period = 8,
 	.i_func = &i_func_equals,
 };
 
@@ -139,6 +146,7 @@ static const struct puncturer punct_292_432 = {
 	.type = TETRA_RCPC_PUNCT_292_432,
 	.P = P_rate2_3,
 	.t = 3,
+	.period = 8,
 	.i_func = &i_func_292,
 };
 
@@ -147,7 +155,26 @@ static const struct puncturer punct_148_432 = {
 	.type = TETRA_RCPC_PUNCT_148_432,
 	.P = P_rate1_3,
 	.t = 6,
+	.period = 8,
 	.i_func = &i_func_148,
+};
+
+/* EN 300 395-2 Section 5.5.2.1 */
+static const struct puncturer punct_114_171 = {
+	.type = TETRA_RCPC_PUNCT_114_171,
+	.P = P_rate8_12,
+	.t = 3,
+	.period = 6,
+	.i_func = &i_func_equals,
+};
+
+/* EN 300 395-2 Section 5.5.2.2 */
+static const struct puncturer punct_72_162 = {
+	.type = TETRA_RCPC_PUNCT_72_162,
+	.P = P_rate8_18,
+	.t = 9,
+	.period = 12,
+	.i_func = &i_func_equals,
 };
 
 static const struct puncturer *tetra_puncts[] = {
@@ -155,6 +182,8 @@ static const struct puncturer *tetra_puncts[] = {
 	[TETRA_RCPC_PUNCT_1_3]		= &punct_1_3,
 	[TETRA_RCPC_PUNCT_292_432]	= &punct_292_432,
 	[TETRA_RCPC_PUNCT_148_432]	= &punct_148_432,
+	[TETRA_RCPC_PUNCT_114_171]	= &punct_114_171,
+	[TETRA_RCPC_PUNCT_72_162]	= &punct_72_162,
 };
 
 /* Puncture the mother code (in) and write 'len' symbols to out */
@@ -175,7 +204,7 @@ int get_punctured_rate(enum tetra_rcpc_puncturer pu, uint8_t *in, int len, uint8
 	/* Section 8.2.3.1.2 */
 	for (j = 1; j <= len; j++) {
 		i = punct->i_func(j);
-		k = 8 * ((i-1)/t) + P[i - t*((i-1)/t)];
+		k = punct->period * ((i-1)/t) + P[i - t*((i-1)/t)];
 		DEBUGP("j = %u, i = %u, k = %u\n", j, i, k);
 		out[j-1] = in[k-1];
 	}
@@ -200,7 +229,7 @@ int tetra_rcpc_depunct(enum tetra_rcpc_puncturer pu, const uint8_t *in, int len,
 	/* Section 8.2.3.1.2 */
 	for (j = 1; j <= len; j++) {
 		i = punct->i_func(j);
-		k = 8 * ((i-1)/t) + P[i - t*((i-1)/t)];
+		k = punct->period * ((i-1)/t) + P[i - t*((i-1)/t)];
 		DEBUGP("j = %u, i = %u, k = %u\n", j, i, k);
 		out[k-1] = in[j-1];
 	}
@@ -220,6 +249,8 @@ static const struct punct_test_param punct_test_params[] = {
 	{ 144, 216, TETRA_RCPC_PUNCT_2_3 },		/* SCH/HD, BNCH, STCH */
 	{ 112, 168, TETRA_RCPC_PUNCT_2_3 },		/* SCH/HU */
 	{ 288, 432, TETRA_RCPC_PUNCT_2_3 },		/* SCH/F */
+	{ 114, 171, TETRA_RCPC_PUNCT_114_171 },		/* Speech class 1 */
+	{ 72, 162, TETRA_RCPC_PUNCT_72_162 },		/* Speech class 2 */
 };
 
 static int mother_memcmp(const uint8_t *mother, const uint8_t *depunct, int len)
@@ -266,9 +297,9 @@ static int test_one_punct(const struct punct_test_param *ptp)
 	/* de-puncture into the depunct_buf (i.e. what happens at the receiver) */
 	tetra_rcpc_depunct(ptp->punct, type3_buf, ptp->type3_len, depunct_buf);
 
-	DEBUGP("MOTH: %s\n", hexdump(mother_buf, mother_len));
-	DEBUGP("PUNC: %s\n", hexdump(type3_buf, ptp->type3_len));
-	DEBUGP("DEPU: %s\n", hexdump(depunct_buf, mother_len));
+	DEBUGP("MOTH: %s\n", osmo_hexdump(mother_buf, mother_len));
+	DEBUGP("PUNC: %s\n", osmo_hexdump(type3_buf, ptp->type3_len));
+	DEBUGP("DEPU: %s\n", osmo_hexdump(depunct_buf, mother_len));
 
 	i = mother_memcmp(mother_buf, depunct_buf, mother_len);
 	if (i < 0) {
