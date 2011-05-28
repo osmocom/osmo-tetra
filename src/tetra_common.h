@@ -44,6 +44,9 @@ extern struct tetra_phy_state t_phy_state;
 
 struct tetra_mac_state {
 	struct llist_head voice_channels;
+	struct {
+		int is_traffic;
+	} cur_burst;
 };
 
 void tetra_mac_state_init(struct tetra_mac_state *tms);
