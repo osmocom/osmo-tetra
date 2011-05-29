@@ -1,0 +1,6 @@
+This directory contains a series of patches against the TETRA codec reference
+source code as published by the ETSI at in the file named
+	en_30039502v010301p0.zip
+
+Due to the use of uppercase file names in the zip file, you should use the "-L"
+flag to the unzip program, which ensures all files are completely lower-case.

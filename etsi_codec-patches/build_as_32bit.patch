@@ -1,0 +1,26 @@
+Index: etsi/amr-code/makefile
+===================================================================
+--- etsi.orig/amr-code/makefile	2011-05-29 11:40:11.000000000 +0200
++++ etsi/amr-code/makefile	2011-05-29 11:40:17.000000000 +0200
+@@ -21,7 +21,7 @@
+ 
+ CC=gcc
+ 
+-CFLAGS	=	-g -I. -Wall
++CFLAGS	=	-g -I. -Wall -m32
+ 
+ SRCS1		=	ccoder.c	ccod_tet.c	init_params.c	sub_cc.c \
+ 			tetra_op.c
+Index: etsi/c-code/makefile
+===================================================================
+--- etsi.orig/c-code/makefile	2011-05-29 11:40:02.000000000 +0200
++++ etsi/c-code/makefile	2011-05-29 11:40:07.000000000 +0200
+@@ -23,7 +23,7 @@
+ 
+ CC=gcc
+ 
+-CFLAGS	=	-I. -Wall
++CFLAGS	=	-I. -Wall -m32
+ 
+ SRCS1		=	scoder.c		scod_tet.c		sub_sc_d.c \
+ 			sub_dsp.c		fbas_tet.c		fexp_tet.c \
