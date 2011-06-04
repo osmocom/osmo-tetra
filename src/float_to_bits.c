@@ -74,19 +74,31 @@ static void sym_int2bits(int sym, uint8_t *ret)
 
 int main(int argc, char **argv)
 {
-	int fd, fd_out;
+	int fd, fd_out, opt;
 
-	if (argc < 3) {
-		fprintf(stderr, "Usage: %s <infile> <outfile>\n", argv[0]);
+	int opt_verbose = 0;
+
+	while ((opt = getopt(argc, argv, "v")) != -1) {
+		switch (opt) {
+		case 'v':
+			opt_verbose = 1;
+			break;
+		default:
+			exit(2);
+		}
+	}
+
+	if (argc <= optind+1) {
+		fprintf(stderr, "Usage: %s [-v] <infile> <outfile>\n", argv[0]);
 		exit(2);
 	}
 
-	fd = open(argv[1], O_RDONLY);
+	fd = open(argv[optind], O_RDONLY);
 	if (fd < 0) {
 		perror("open infile");
 		exit(1);
 	}
-	fd_out = creat(argv[2], 0660);
+	fd_out = creat(argv[optind+1], 0660);
 	if (fd_out < 0) {
 		perror("open outfile");
 		exit(1);
@@ -104,7 +116,8 @@ int main(int argc, char **argv)
 		rc = process_sym_fl(0.3f, fl);
 		sym_int2bits(rc, bits);
 		//printf("%2d %1u %1u  %f\n", rc, bits[0], bits[1], fl);
-		//printf("%1u%1u", bits[0], bits[1]);
+		if (opt_verbose)
+			printf("%1u%1u", bits[0], bits[1]);
 
 		rc = write(fd_out, bits, 2);
 		if (rc < 0) {
