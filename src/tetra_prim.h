@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "osmo_prim.h"
+#include <osmocom/core/prim.h>
 
 #include "tetra_common.h"
 
