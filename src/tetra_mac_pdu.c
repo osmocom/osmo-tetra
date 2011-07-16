@@ -193,6 +193,9 @@ int macpdu_decode_resource(struct tetra_resrc_decoded *rsd, const uint8_t *bits)
 		rsd->addr.ssi = bits_to_uint(cur, 24);
 		rsd->addr.usage_marker = bits_to_uint(cur, 6);
 		break;
+	default:
+		return -EINVAL;
+		break;
 	}
 	cur += addr_len_by_type[rsd->addr.type];
 	/* no intermediate napping in pi/4 */
