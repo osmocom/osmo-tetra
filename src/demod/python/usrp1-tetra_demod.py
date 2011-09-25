@@ -14,6 +14,8 @@ except:
 
 # applies frequency translation, resampling (interpolation/decimation) and cqpsk demodulation
 
+
+
 class my_top_block(gr.top_block):
     def __init__(self, options):
         gr.top_block.__init__(self)
@@ -22,13 +24,29 @@ class my_top_block(gr.top_block):
         fusb_nblocks    = gr.prefs().get_long('fusb', 'nblocks', 16)
         self._u = usrp.source_c(decim_rate=options.decim, fusb_block_size=fusb_block_size, fusb_nblocks=fusb_nblocks)
 
-        if options.rx_subdev_spec is None:
-            #options.rx_subdev_spec = pick_subdevice(self._u)
-            options.rx_subdev_spec = (0, 0)
+        # master clock
+        if options.fpga_freq is not None:
+            self._u.set_fpga_master_clock_freq(long(options.fpga_freq))
 
+        # default subdev if use didn't pick one
+        if options.rx_subdev_spec is None:
+            if u.db(0, 0).dbid() >= 0:
+                options.rx_subdev_spec = (0, 0)
+            elif u.db(1, 0).dbid() >= 0:
+                options.rx_subdev_spec = (1, 0)
+            else:
+                options.rx_subdev_spec = (0, 0)
+
+        # configure usrp mux
         self._u.set_mux(usrp.determine_rx_mux_value(self._u, options.rx_subdev_spec))
+
         # determine the daughterboard subdevice
         self.subdev = usrp.selected_subdev(self._u, options.rx_subdev_spec)
+
+        # select antenna
+        if options.antenna is not None:
+            print "Selecting antenna %s" % (options.antenna,)
+            self.subdev.select_rx_antenna(options.antenna)
 
         # set initial values
         if options.gain is None:
@@ -82,6 +100,10 @@ def get_options():
                       help="set gain in dB (default is midpoint)")
     parser.add_option("-R", "--rx-subdev-spec", type="subdev", default=None,
                       help="Select USRP Rx side A or B (default=first one with a daughterboard)")
+    parser.add_option("-A", "--antenna", default=None,
+                      help="select Rx Antenna")
+    parser.add_option("-F", "--fpga-freq", type="eng_float", default=None,
+                      help="set USRP reference clock frequency to FPGA_FREQ", metavar="FPGA_FREQ")
 
     # demodulator related settings
     parser.add_option("-c", "--calibration", type="int", default=0, help="freq offset")
