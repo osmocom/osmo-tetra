@@ -27,11 +27,20 @@
 differential PI/4 CQPSK modulation and demodulation.
 """
 
-from gnuradio import gr, gru, modulation_utils
+from gnuradio import gr, gru
 from math import pi, sqrt
 #import psk
 import cmath
 from pprint import pprint
+
+_def_has_gr_digital = False
+
+# address gnuradio 3.5.x changes
+try:
+    from gnuradio import modulation_utils
+except ImportError:
+    from gnuradio import digital
+    _def_has_gr_digital = True
 
 # default values (used in __init__ and add_options)
 _def_samples_per_symbol = 10
@@ -253,12 +262,23 @@ class cqpsk_demod(gr.hier_block2):
         fmin = -0.025
         fmax = 0.025
         
-        self.receiver=gr.mpsk_receiver_cc(arity, pi/4.0,
+	if not _def_has_gr_digital:
+            self.receiver=gr.mpsk_receiver_cc(arity, pi/4.0,
                                           self._costas_alpha, self._costas_beta,
                                           fmin, fmax,
                                           self._mm_mu, self._mm_gain_mu,
                                           self._mm_omega, self._mm_gain_omega,
                                           self._mm_omega_relative_limit)
+	else:
+            self.receiver=digital.mpsk_receiver_cc(arity, pi/4.0,
+                                          2*pi/150,
+                                          fmin, fmax,
+                                          self._mm_mu, self._mm_gain_mu,
+                                          self._mm_omega, self._mm_gain_omega,
+                                          self._mm_omega_relative_limit)
+
+	    self.receiver.set_alpha(self._costas_alpha)
+	    self.receiver.set_beta(self._costas_beta)
 
         # Perform Differential decoding on the constellation
         self.diffdec = gr.diff_phasor_cc()
