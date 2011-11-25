@@ -55,17 +55,10 @@ static const struct osmo_conv_code conv_tch = {
 
 int conv_tch_decode(int8_t *input, uint8_t *output, int n)
 {
-	struct osmo_conv_decoder decoder;
-	int rv, l;
+	struct osmo_conv_code code;
 
-	osmo_conv_decode_init(&decoder, &conv_tch, n);
+	memcpy(&code, &conv_tch, sizeof(struct osmo_conv_code));
+	code.len = n;
 
-	l = osmo_conv_decode_scan(&decoder, input, n);
-	l = osmo_conv_decode_finish(&decoder, &input[l]);
-
-	rv = osmo_conv_decode_get_output(&decoder, output, 1);
-
-	osmo_conv_decode_deinit(&decoder);
-
-	return rv;
+	return osmo_conv_decode(&code, input, output);
 }
