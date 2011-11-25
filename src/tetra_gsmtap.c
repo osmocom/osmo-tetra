@@ -7,6 +7,7 @@
 
 #include <osmocom/core/msgb.h>
 #include <osmocom/core/gsmtap.h>
+#include <osmocom/core/gsmtap_util.h>
 #include <osmocom/core/bits.h>
 #include <netinet/in.h>
 
@@ -70,8 +71,6 @@ int tetra_gsmtap_sendmsg(struct msgb *msg)
 
 int tetra_gsmtap_init(const char *host, uint16_t port)
 {
-	int fd;
-
 	g_gti = gsmtap_source_init(host, port, 0);
 	if (!g_gti)
 		return -EINVAL;
