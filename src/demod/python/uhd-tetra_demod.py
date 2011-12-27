@@ -22,34 +22,43 @@ class my_top_block(gr.top_block):
 
         # Create a UHD source
         self._u = uhd.usrp_source(
-               device_addr=options.device_addr,
+               device_addr=options.args,
                io_type=uhd.io_type.COMPLEX_FLOAT32,
                num_channels=1)
-        
-        sample_rate = 100e6/512
+
+        # Set the subdevice spec
+        if(options.spec):
+            self._u.set_subdev_spec(options.spec, 0)
+
+        # Set the antenna
+        if(options.antenna):
+            self._u.set_antenna(options.antenna, 0)
+
+        # Pick the lowest possible value for the input rate
+        supported_rates = self._u.get_samp_rates()
+        self._u.set_samp_rate(supported_rates.start())
+
+        sample_rate = self._u.get_samp_rate()
         symbol_rate = 18000
         sps = 2
-        
-        # set sampling rate and antenna port
-        self._u.set_samp_rate(sample_rate)
-        self._u.set_antenna(options.antenna, 0)
-        
+
         # output rate will be 36,000
         ntaps = 11 * sps
         new_sample_rate = symbol_rate * sps
-        
+
         # Set receive daughterboard gain
         if options.gain is None:
             g = self._u.get_gain_range()
             options.gain = float(g.stop()+g.start())/2
             print "Using mid-point gain of", options.gain, "(", g.start(), "-", g.stop(), ")"
         self._u.set_gain(options.gain)
- 
-        # Set receive frequency
-        if options.lo_offset is not None:
-            self._u.set_lo_offset(options.lo_offset)
 
-        tr = self._u.set_center_freq(options.freq)
+        # Set frequency (tune request takes lo_offset)
+        if(options.lo_offset is not None):
+            treq = uhd.tune_request(options.freq, options.lo_offset)
+        else:
+            treq = uhd.tune_request(options.freq)
+        tr = self._u.set_center_freq(treq)
         if tr == None:
             sys.stderr.write('Failed to set center frequency\n')
             raise SystemExit, 1
@@ -80,10 +89,12 @@ class my_top_block(gr.top_block):
 def get_options():
     parser = OptionParser(option_class=eng_option)
     # usrp related settings
-    parser.add_option("-d", "--device_addr", type="string", default="",
-                      help="UHD device address [default=%default]")
-    parser.add_option("-a", "--antenna", type="string", default="TX/RX",
-                      help="daughterboard antenna [default=%default]")
+    parser.add_option("-a", "--args", type="string", default="",
+                      help="UHD device address args, [default=%default]")
+    parser.add_option("", "--spec", type="string", default=None,
+                      help="Subdevice of UHD device where appropriate")
+    parser.add_option("-A", "--antenna", type="string", default=None,
+                      help="select Rx Antenna where appropriate")
     parser.add_option("-f", "--freq", type="eng_float", default=None,
                       help="set frequency to FREQ", metavar="FREQ")
     parser.add_option("-g", "--gain", type="eng_float", default=None,
@@ -102,12 +113,12 @@ def get_options():
     if len(args) != 0:
         parser.print_help()
         raise SystemExit, 1
-    
+
     if options.freq is None:
         parser.print_help()
         sys.stderr.write('You must specify the frequency with -f FREQ\n');
         raise SystemExit, 1
-    
+
     return (options)
 
 if __name__ == "__main__":
