@@ -38,7 +38,7 @@ class top_block(grc_wxgui.top_block_gui):
     self.ifreq = options.frequency
     self.rfgain = options.gain
 
-    self.src = osmosdr.source_c()
+    self.src = osmosdr.source_c(options.args)
     self.src.set_center_freq(self.ifreq)
     self.src.set_sample_rate(int(options.sample_rate))
 
@@ -53,6 +53,7 @@ class top_block(grc_wxgui.top_block_gui):
 
     # may differ from the requested rate
     sample_rate = self.src.get_sample_rate()
+    sys.stderr.write("sample rate: %d\n" % (sample_rate))
 
     symbol_rate = 18000
     sps = 2 # output rate will be 36,000
@@ -66,8 +67,6 @@ class top_block(grc_wxgui.top_block_gui):
 
     taps = gr.firdes.low_pass(1.0, sample_rate, options.low_pass, options.low_pass * 0.2, gr.firdes.WIN_HANN)
     self.tuner = gr.freq_xlating_fir_filter_ccf(first_decim, taps, self.offset, sample_rate)
-
-    sys.stderr.write("sample rate: %d\n" % (sample_rate))
 
     self.demod = cqpsk.cqpsk_demod(
         samples_per_symbol = sps,
@@ -203,6 +202,8 @@ class top_block(grc_wxgui.top_block_gui):
 def get_options():
     parser = OptionParser(option_class=eng_option)
 
+    parser.add_option("-a", "--args", type="string", default="",
+        help="gr-osmosdr device arguments")
     parser.add_option("-s", "--sample-rate", type="eng_float", default=1800000,
         help="set receiver sample rate (default 1800000)")
     parser.add_option("-f", "--frequency", type="eng_float", default=394.6e6,
