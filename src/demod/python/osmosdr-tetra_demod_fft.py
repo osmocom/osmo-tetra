@@ -16,6 +16,7 @@ import math
 from gnuradio import gr, gru, eng_notation, blks2, optfir
 from gnuradio.eng_option import eng_option
 from gnuradio.wxgui import fftsink2
+from gnuradio.wxgui import scopesink2
 from gnuradio.wxgui import forms
 from grc_gnuradio import wxgui as grc_wxgui
 from optparse import OptionParser
@@ -92,6 +93,11 @@ class top_block(grc_wxgui.top_block_gui):
 
     self.connect(self.src, self.tuner, self.resamp, self.demod, self.output)
 
+    self.Main = wx.Notebook(self.GetWin(), style=wx.NB_TOP)
+    self.Main.AddPage(grc_wxgui.Panel(self.Main), "Wideband Spectrum")
+    self.Main.AddPage(grc_wxgui.Panel(self.Main), "Channel Spectrum")
+    self.Main.AddPage(grc_wxgui.Panel(self.Main), "Soft Bits")
+
     def set_ifreq(ifreq):
         self.ifreq = ifreq
         self._ifreq_text_box.set_value(self.ifreq)
@@ -154,6 +160,8 @@ class top_block(grc_wxgui.top_block_gui):
 
     self.Add(_rfgain_sizer)
 
+    self.Add(self.Main)
+
     def fftsink2_callback(x, y):
         if abs(x / (sample_rate / 2)) > 0.9:
             set_ifreq(self.ifreq + x / 2)
@@ -162,7 +170,7 @@ class top_block(grc_wxgui.top_block_gui):
             self.offset = -x
             self.tuner.set_center_freq(self.offset)
 
-    self.scope = fftsink2.fft_sink_c(self.GetWin(),
+    self.scope = fftsink2.fft_sink_c(self.Main.GetPage(0).GetWin(),
         title="Wideband Spectrum (click to coarse tune)",
         fft_size=1024,
         sample_rate=sample_rate,
@@ -173,7 +181,7 @@ class top_block(grc_wxgui.top_block_gui):
         average=False,
         avg_alpha=0.6)
 
-    self.Add(self.scope.win)
+    self.Main.GetPage(0).Add(self.scope.win)
     self.scope.set_callback(fftsink2_callback)
 
     self.connect(self.src, self.scope)
@@ -183,7 +191,7 @@ class top_block(grc_wxgui.top_block_gui):
         sys.stderr.write("fine tuned to: %d Hz\n" % self.offset)
         self.tuner.set_center_freq(self.offset)
 
-    self.scope2 = fftsink2.fft_sink_c(self.GetWin(),
+    self.scope2 = fftsink2.fft_sink_c(self.Main.GetPage(1).GetWin(),
         title="Channel Spectrum (click to fine tune)",
         fft_size=1024,
         sample_rate=out_sample_rate,
@@ -194,10 +202,27 @@ class top_block(grc_wxgui.top_block_gui):
         average=False,
         avg_alpha=0.6)
 
-    self.Add(self.scope2.win)
+    self.Main.GetPage(1).Add(self.scope2.win)
     self.scope2.set_callback(fftsink2_callback2)
 
     self.connect(self.resamp, self.scope2)
+
+    self.scope3 = scopesink2.scope_sink_f(
+        self.Main.GetPage(2).GetWin(),
+        title="Soft Bits",
+        sample_rate=out_sample_rate,
+        v_scale=0,
+        v_offset=0,
+        t_scale=0.001,
+        ac_couple=False,
+        xy_mode=False,
+        num_inputs=1,
+        trig_mode=gr.gr_TRIG_MODE_AUTO,
+        y_axis_label="Counts",
+	)
+    self.Main.GetPage(2).Add(self.scope3.win)
+
+    self.connect(self.demod, self.scope3)
 
 def get_options():
     parser = OptionParser(option_class=eng_option)
@@ -206,7 +231,7 @@ def get_options():
         help="gr-osmosdr device arguments")
     parser.add_option("-s", "--sample-rate", type="eng_float", default=1800000,
         help="set receiver sample rate (default 1800000)")
-    parser.add_option("-f", "--frequency", type="eng_float", default=394.6e6,
+    parser.add_option("-f", "--frequency", type="eng_float", default=394.4e6,
         help="set receiver center frequency")
     parser.add_option("-g", "--gain", type="eng_float", default=None,
         help="set receiver gain")
