@@ -13,8 +13,7 @@
 
 import sys
 import math
-from gnuradio import gr, gru, audio, eng_notation, blks2, optfir
-from gnuradio import audio
+from gnuradio import gr, gru, eng_notation, blks2, optfir
 from gnuradio.eng_option import eng_option
 from gnuradio.wxgui import fftsink2
 from gnuradio.wxgui import forms
