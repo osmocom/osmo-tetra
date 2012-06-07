@@ -3,7 +3,7 @@
 # Copyright 2012 Dimitri Stolnikov <horiz0n@gmx.net>
 
 # Usage:
-# src$ ./demod/python/rtlsdr-tetra_demod_fft.py -o /dev/stdout | ./float_to_bits /dev/stdin /dev/stdout | ./tetra-rx /dev/stdin
+# src$ ./demod/python/osmosdr-tetra_demod_fft.py -o /dev/stdout | ./float_to_bits /dev/stdin /dev/stdout | ./tetra-rx /dev/stdin
 #
 # Adjust the center frequency (-f) and gain (-g) according to your needs.
 # Use left click in Wideband Spectrum window to roughly select a TETRA carrier.
