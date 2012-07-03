@@ -38,6 +38,7 @@ class top_block(grc_wxgui.top_block_gui):
 
     self.ifreq = options.frequency
     self.rfgain = options.gain
+    self.offset = options.frequency_offset
 
     self.src = osmosdr.source_c(options.args)
     self.src.set_center_freq(self.ifreq)
@@ -236,6 +237,8 @@ def get_options():
         help="set receiver sample rate (default 1800000)")
     parser.add_option("-f", "--frequency", type="eng_float", default=394.4e6,
         help="set receiver center frequency")
+    parser.add_option("-F", "--frequency-offset", type="eng_float", default=0,
+        help="set receiver offset frequency")
     parser.add_option("-g", "--gain", type="eng_float", default=None,
         help="set receiver gain")
 
