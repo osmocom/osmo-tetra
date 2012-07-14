@@ -191,7 +191,7 @@ int macpdu_decode_resource(struct tetra_resrc_decoded *rsd, const uint8_t *bits)
 		break;
 	case ADDR_TYPE_SSI_USAGE:
 		rsd->addr.ssi = bits_to_uint(cur, 24);
-		rsd->addr.usage_marker = bits_to_uint(cur, 6);
+		rsd->addr.usage_marker = bits_to_uint(cur+24, 6);
 		break;
 	default:
 		return -EINVAL;
