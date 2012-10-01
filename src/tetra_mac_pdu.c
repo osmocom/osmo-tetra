@@ -93,8 +93,10 @@ static int decode_chan_alloc(struct tetra_chan_alloc_decoded *cad, const uint8_t
 		cad->ext_carr.reverse_oper =	bits_to_uint(cur, 1); cur += 1;
 	}
 	cad->monit_pattern =	bits_to_uint(cur, 2); cur += 2;
-	if (cad->monit_pattern == 0)
-		cad->monit_patt_f18 =	bits_to_uint(cur, 2); cur += 2;
+	if (cad->monit_pattern == 0) {
+		cad->monit_patt_f18 =	bits_to_uint(cur, 2);
+		cur += 2;
+	}
 	if (cad->ul_dl == 0) {
 		cad->aug.ul_dl_ass =	bits_to_uint(cur, 2); cur += 2;
 		cad->aug.bandwidth =	bits_to_uint(cur, 3); cur += 3;
