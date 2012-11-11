@@ -30,10 +30,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-static int process_sym_fl(float offset, float fl)
+static int process_sym_fl(float fl)
 {
 	int ret;
-	fl += offset;
 
 	/* very simplistic scheme */
 	if (fl > 2)
@@ -113,7 +112,7 @@ int main(int argc, char **argv)
 			exit(1);
 		} else if (rc == 0)
 			break;
-		rc = process_sym_fl(0.3f, fl);
+		rc = process_sym_fl(fl);
 		sym_int2bits(rc, bits);
 		//printf("%2d %1u %1u  %f\n", rc, bits[0], bits[1], fl);
 		if (opt_verbose)
