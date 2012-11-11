@@ -62,7 +62,10 @@ class top_block(grc_wxgui.top_block_gui):
 
     options.low_pass = options.low_pass / 2.0
 
-    first_decim = 10
+    if sample_rate == 96000: # FunCube Dongle
+        first_decim = 2
+    else:
+        first_decim = 10
 
     self.offset = 0
 
