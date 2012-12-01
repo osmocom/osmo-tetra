@@ -2,7 +2,7 @@
 #define TETRA_COMMON_H
 
 #include <stdint.h>
-
+#include "tetra_mac_pdu.h"
 #include <osmocom/core/linuxlist.h>
 
 #ifdef DEBUG
@@ -47,6 +47,7 @@ struct tetra_mac_state {
 	struct {
 		int is_traffic;
 	} cur_burst;
+    struct tetra_si_decoded last_sid;
 };
 
 void tetra_mac_state_init(struct tetra_mac_state *tms);

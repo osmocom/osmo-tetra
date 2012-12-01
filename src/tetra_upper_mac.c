@@ -40,9 +40,6 @@
 
 static int rx_tm_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len);
 
-/* FIXME: this is ugly */
-static struct tetra_si_decoded g_last_sid;
-
 static void rx_bcast(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms)
 {
 	struct msgb *msg = tmvp->oph.msg;
@@ -74,10 +71,10 @@ static void rx_bcast(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 		printf("\t%s: %u\n", tetra_get_bs_serv_det_name(1 << i),
 			sid.mle_si.bs_service_details & (1 << i) ? 1 : 0);
 
-	memcpy(&g_last_sid, &sid, sizeof(sid));
+	memcpy(&tms->last_sid, &sid, sizeof(sid));
 }
 
-const char *tetra_alloc_dump(const struct tetra_chan_alloc_decoded *cad)
+const char *tetra_alloc_dump(const struct tetra_chan_alloc_decoded *cad, struct tetra_mac_state *tms)
 {
 	static char buf[64];
 	char *cur = buf;
@@ -87,8 +84,8 @@ const char *tetra_alloc_dump(const struct tetra_chan_alloc_decoded *cad)
 		freq_band = cad->ext_carr.freq_band;
 		freq_offset = cad->ext_carr.freq_offset;
 	} else {
-		freq_band = g_last_sid.freq_band;
-		freq_offset = g_last_sid.freq_offset;
+		freq_band = tms->last_sid.freq_band;
+		freq_offset = tms->last_sid.freq_offset;
 	}
 
 	cur += sprintf(cur, "%s (TN%u/%s/%uHz)",
@@ -170,7 +167,7 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 		goto out;
 
 	if (rsd.chan_alloc_pres)
-		printf("ChanAlloc=%s ", tetra_alloc_dump(&rsd.cad));
+		printf("ChanAlloc=%s ", tetra_alloc_dump(&rsd.cad, tms));
 
 	if (rsd.slot_granting.pres)
 		printf("SlotGrant=%u/%u ", rsd.slot_granting.nr_slots,
