@@ -95,6 +95,5 @@ char *tetra_tdma_time_dump(const struct tetra_tdma_time *tm)
 
 uint32_t tetra_tdma_time2fn(struct tetra_tdma_time *tm)
 {
-	/* FIXME: add hyperframe number !! */
-	return (tm->mn *18) + tm->fn;
+	return (((tm->hn * 60) + tm->mn) * 18) + tm->fn;
 }

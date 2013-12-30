@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 struct tetra_tdma_time {
+	uint16_t hn;    /* hyperframe number (1 ... 65535) */
 	uint32_t sn;	/* symbol number (1 ... 255) */
 	uint32_t tn;	/* timeslot number (1 .. 4) */
 	uint32_t fn;	/* frame number (1 .. 18) */
