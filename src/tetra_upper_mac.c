@@ -49,6 +49,7 @@ static void rx_bcast(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 
 	memset(&sid, 0, sizeof(sid));
 	macpdu_decode_sysinfo(&sid, msg->l1h);
+	tmvp->u.unitdata.tdma_time.hn = sid.hyperframe_number;
 
 	dl_freq = tetra_dl_carrier_hz(sid.freq_band,
 				      sid.main_carrier,
