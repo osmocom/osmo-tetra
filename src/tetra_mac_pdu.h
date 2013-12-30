@@ -60,6 +60,12 @@ struct tetra_si_decoded {
 		uint16_t cck_id;
 		uint16_t hyperframe_number;
 	};
+	uint8_t option_field;
+	union {
+		uint32_t frame_bitmap;
+		uint32_t access_code;
+		uint32_t ext_service;
+	};
 	struct tetra_mle_si_decoded mle_si;
 };
 
