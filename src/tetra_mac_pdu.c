@@ -65,14 +65,14 @@ void macpdu_decode_sysinfo(struct tetra_si_decoded *sid, const uint8_t *si_bits)
 	sid->option_field      = bits_to_uint(cur,  2); cur +=  2;
 	switch(sid->option_field)
 	{
-	  case 0x00:         // Even multiframe definition for TS mode
-	  case 0x01:         // Odd multiframe definition for TS mode
+	  case TETRA_MAC_OPT_FIELD_EVEN_MULTIFRAME:     // Even multiframe definition for TS mode
+	  case TETRA_MAC_OPT_FIELD_ODD_MULTIFRAME:      // Odd multiframe definition for TS mode
 	    sid->frame_bitmap = bits_to_uint(cur, 20); cur += 20;
 	    break;
-	  case 0x02:         // Default definition for access code A
+	  case TETRA_MAC_OPT_FIELD_ACCESS_CODE:         // Default definition for access code A
 	    sid->access_code = bits_to_uint(cur, 20); cur += 20;
 	    break;
-	  case 0x04:         // Extended services broadcast
+	  case TETRA_MAC_OPT_FIELD_EXT_SERVICES:        // Extended services broadcast
 	    sid->ext_service = bits_to_uint(cur, 20); cur += 20;
 	    break;
 	}
