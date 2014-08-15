@@ -15,6 +15,7 @@ import sys
 import math
 from gnuradio import gr, gru, eng_notation, blocks, filter
 from gnuradio.eng_option import eng_option
+from gnuradio import wxgui
 from gnuradio.wxgui import fftsink2
 from gnuradio.wxgui import scopesink2
 from gnuradio.wxgui import forms
@@ -24,7 +25,10 @@ from optparse import OptionParser
 import osmosdr
 import wx
 
-import cqpsk
+try:
+    import cqpsk
+except:
+    from tetra_demod import cqpsk
 
 # applies frequency translation, resampling and demodulation
 
@@ -40,10 +44,15 @@ class top_block(grc_wxgui.top_block_gui):
     self.src = osmosdr.source(options.args)
     self.src.set_center_freq(self.ifreq)
     self.src.set_sample_rate(int(options.sample_rate))
-    self.src.set_freq_corr(0, 0)
-    self.src.set_dc_offset_mode(2, 0)
-    self.src.set_iq_balance_mode(2, 0)
-    self.src.set_gain_mode(1, 0)
+
+    if self.rfgain is None:
+        self.src.set_gain_mode(1)
+        self.iagc = 1
+        self.rfgain = 0
+    else:
+        self.iagc = 0
+        self.src.set_gain_mode(0)
+        self.src.set_gain(self.rfgain)
 
     # may differ from the requested rate
     sample_rate = self.src.get_sample_rate()
@@ -77,7 +86,7 @@ class top_block(grc_wxgui.top_block_gui):
 
     self.output = blocks.file_sink(gr.sizeof_float, options.output_file)
 
-    rerate = float(sample_rate / float(first_decim)) / float(out_sample_rate)
+    rerate = float(sample_rate) / float(first_decim) / float(out_sample_rate)
     sys.stderr.write("resampling factor: %f\n" % rerate)
 
     if rerate.is_integer():
@@ -86,7 +95,8 @@ class top_block(grc_wxgui.top_block_gui):
         self.resamp = filter.fir_filter_ccf(int(rerate), firdes.low_pass(1,int(sample_rate/first_decim), 50000,5000))
     else:
         sys.stderr.write("using pfb resampler\n")
-        self.resamp = filter.pfb_arb_resampler_ccf(1 / rerate,[], 0)
+        t = filter.firdes.low_pass_2(32, 32.0*sample_rate/first_decim, 60000, 5000, attenuation_dB=3, window=filter.firdes.WIN_BLACKMAN_hARRIS)
+        self.resamp = filter.pfb_arb_resampler_ccf(1.0/rerate, t, 32)
 
     self.connect(self.src, self.tuner, self.resamp, self.demod, self.output)
 
@@ -109,6 +119,53 @@ class top_block(grc_wxgui.top_block_gui):
     )
     self.Add(self._ifreq_text_box)
 
+    def set_iagc(iagc):
+        self.iagc = iagc
+        self._agc_check_box.set_value(self.iagc)
+        self.src.set_gain_mode(self.iagc, 0)
+        self.src.set_gain(0 if self.iagc == 1 else self.rfgain, 0)
+
+    self._agc_check_box = forms.check_box(
+        parent=self.GetWin(),
+        value=self.iagc,
+        callback=set_iagc,
+        label="Automatic Gain",
+        true=1,
+        false=0,
+    )
+
+    self.Add(self._agc_check_box)
+
+    def set_rfgain(rfgain):
+        self.rfgain = rfgain
+        self._rfgain_slider.set_value(self.rfgain)
+        self._rfgain_text_box.set_value(self.rfgain)
+        self.src.set_gain(0 if self.iagc == 1 else self.rfgain, 0)
+
+    _rfgain_sizer = wx.BoxSizer(wx.VERTICAL)
+    self._rfgain_text_box = forms.text_box(
+        parent=self.GetWin(),
+        sizer=_rfgain_sizer,
+        value=self.rfgain,
+        callback=set_rfgain,
+        label="RF Gain",
+        converter=forms.float_converter(),
+        proportion=0,
+    )
+    self._rfgain_slider = forms.slider(
+        parent=self.GetWin(),
+        sizer=_rfgain_sizer,
+        value=self.rfgain,
+        callback=set_rfgain,
+        minimum=0,
+        maximum=50,
+        num_steps=200,
+        style=wx.SL_HORIZONTAL,
+        cast=float,
+        proportion=1,
+    )
+
+    self.Add(_rfgain_sizer)
 
     self.Add(self.Main)
 
@@ -167,9 +224,9 @@ class top_block(grc_wxgui.top_block_gui):
         ac_couple=False,
         xy_mode=False,
         num_inputs=1,
-        #trig_mode=gr.gr_TRIG_MODE_AUTO,
+        trig_mode=wxgui.TRIG_MODE_AUTO,
         y_axis_label="Counts",
-	)
+    )
     self.Main.GetPage(2).Add(self.scope3.win)
 
     self.connect(self.demod, self.scope3)
