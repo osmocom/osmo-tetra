@@ -2,8 +2,9 @@
 
 import sys
 import math
-from gnuradio import gr, gru, audio, eng_notation, blks2, optfir
+from gnuradio import gr, gru, audio, eng_notation, filter, blocks
 from gnuradio import uhd
+from gnuradio.filter import firdes
 from gnuradio.eng_option import eng_option
 from optparse import OptionParser
 
@@ -63,9 +64,9 @@ class my_top_block(gr.top_block):
             sys.stderr.write('Failed to set center frequency\n')
             raise SystemExit, 1
 
-        channel_taps = gr.firdes.low_pass(1.0, sample_rate, options.low_pass, options.low_pass * 0.1, gr.firdes.WIN_HANN)
+        channel_taps = firdes.low_pass(1.0, sample_rate, options.low_pass, options.low_pass * 0.1, firdes.WIN_HANN)
 
-        FILTER = gr.freq_xlating_fir_filter_ccf(1, channel_taps, options.calibration, sample_rate)
+        FILTER = filter.freq_xlating_fir_filter_ccf(1, channel_taps, options.calibration, sample_rate)
 
         sys.stderr.write("sample rate: %d\n" %(sample_rate))
 
@@ -78,11 +79,11 @@ class my_top_block(gr.top_block):
                                  log=options.log,
                                  verbose=options.verbose)
 
-        OUT = gr.file_sink(gr.sizeof_float, options.output_file)
+        OUT = blocks.file_sink(gr.sizeof_float, options.output_file)
 
         r = float(sample_rate) / float(new_sample_rate)
 
-        INTERPOLATOR = gr.fractional_interpolator_cc(0, r)
+        INTERPOLATOR = filter.fractional_interpolator_cc(0, r)
 
         self.connect(self._u, FILTER, INTERPOLATOR, DEMOD, OUT)
 
