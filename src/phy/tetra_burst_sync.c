@@ -112,7 +112,7 @@ int tetra_burst_sync_in(struct tetra_rx_state *trs, uint8_t *bits, unsigned int 
 			/* we have successfully received (at least) one frame */
 			tetra_tdma_time_add_tn(&t_phy_state.time, 1);
 			printf("\nBURST");
-			DEBUGP(": %s", ubit_dump(trs->bitbuf, TETRA_BITS_PER_TS));
+			DEBUGP(": %s", osmo_ubit_dump(trs->bitbuf, TETRA_BITS_PER_TS));
 			printf("\n");
 			rc = tetra_find_train_seq(trs->bitbuf, trs->bits_in_buf,
 						  (1 << TETRA_TRAIN_NORM_1)|
