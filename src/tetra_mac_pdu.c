@@ -39,28 +39,45 @@ static void decode_d_mle_sysinfo(struct tetra_mle_si_decoded *msid, const uint8_
 	msid->bs_service_details = bits_to_uint(cur, 12); cur += 12;
 }
 
+/* see 21.4.4.1 */
 void macpdu_decode_sysinfo(struct tetra_si_decoded *sid, const uint8_t *si_bits)
 {
-	const uint8_t *cur = si_bits + 4;
+	const uint8_t *cur     = si_bits;
+	cur += 2; // skip Broadcast PDU header
+	cur += 2; // skip Sysinfo PDU header
 
-	sid->main_carrier = bits_to_uint(cur, 12); cur += 12;
-	sid->freq_band = bits_to_uint(cur, 4); cur += 4;
-	sid->freq_offset = bits_to_uint(cur, 2); cur += 2;
-	sid->duplex_spacing = bits_to_uint(cur, 3); cur += 3;
+	sid->main_carrier      = bits_to_uint(cur, 12); cur += 12;
+	sid->freq_band         = bits_to_uint(cur,  4); cur +=  4;
+	sid->freq_offset       = bits_to_uint(cur,  2); cur +=  2;
+	sid->duplex_spacing    = bits_to_uint(cur,  3); cur +=  3;
 	sid->reverse_operation = *cur++;
-	sid->num_of_csch = bits_to_uint(cur, 2); cur +=2;
-	sid->ms_txpwr_max_cell = bits_to_uint(cur, 3); cur += 3;
-	sid->rxlev_access_min = bits_to_uint(cur, 4); cur += 4;
-	sid->access_parameter = bits_to_uint(cur, 4); cur += 4;
-	sid->radio_dl_timeout = bits_to_uint(cur, 4); cur += 4;
-	sid->cck_valid_no_hf = *cur++;
+	sid->num_of_csch       = bits_to_uint(cur,  2); cur +=  2;
+	sid->ms_txpwr_max_cell = bits_to_uint(cur,  3); cur +=  3;
+	sid->rxlev_access_min  = bits_to_uint(cur,  4); cur +=  4;
+	sid->access_parameter  = bits_to_uint(cur,  4); cur +=  4;
+	sid->radio_dl_timeout  = bits_to_uint(cur,  4); cur +=  4;
+	sid->cck_valid_no_hf   = *cur++;
 	if (sid->cck_valid_no_hf)
 		sid->cck_id = bits_to_uint(cur, 16);
 	else
 		sid->hyperframe_number = bits_to_uint(cur, 16);
-	cur += 16;
-	/* FIXME: more */
-	decode_d_mle_sysinfo(&sid->mle_si, si_bits + 124-42);
+	
+	sid->option_field      = bits_to_uint(cur,  2); cur +=  2;
+	switch(sid->option_field)
+	{
+	  case TETRA_MAC_OPT_FIELD_EVEN_MULTIFRAME:     // Even multiframe definition for TS mode
+	  case TETRA_MAC_OPT_FIELD_ODD_MULTIFRAME:      // Odd multiframe definition for TS mode
+	    sid->frame_bitmap = bits_to_uint(cur, 20); cur += 20;
+	    break;
+	  case TETRA_MAC_OPT_FIELD_ACCESS_CODE:         // Default definition for access code A
+	    sid->access_code = bits_to_uint(cur, 20); cur += 20;
+	    break;
+	  case TETRA_MAC_OPT_FIELD_EXT_SERVICES:        // Extended services broadcast
+	    sid->ext_service = bits_to_uint(cur, 20); cur += 20;
+	    break;
+	}
+
+	decode_d_mle_sysinfo(&sid->mle_si, si_bits + 124-42);  // could be also cur due to previous fixes
 }
 
 static const uint8_t addr_len_by_type[] = {

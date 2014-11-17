@@ -13,11 +13,13 @@
 
 import sys
 import math
-from gnuradio import gr, gru, eng_notation, blks2, optfir
+from gnuradio import gr, gru, eng_notation, blocks, filter
 from gnuradio.eng_option import eng_option
+from gnuradio import wxgui
 from gnuradio.wxgui import fftsink2
 from gnuradio.wxgui import scopesink2
 from gnuradio.wxgui import forms
+from gnuradio.filter import firdes
 from grc_gnuradio import wxgui as grc_wxgui
 from optparse import OptionParser
 import osmosdr
@@ -39,7 +41,7 @@ class top_block(grc_wxgui.top_block_gui):
     self.ifreq = options.frequency
     self.rfgain = options.gain
 
-    self.src = osmosdr.source_c(options.args)
+    self.src = osmosdr.source(options.args)
     self.src.set_center_freq(self.ifreq)
     self.src.set_sample_rate(int(options.sample_rate))
 
@@ -69,8 +71,8 @@ class top_block(grc_wxgui.top_block_gui):
 
     self.offset = 0
 
-    taps = gr.firdes.low_pass(1.0, sample_rate, options.low_pass, options.low_pass * 0.2, gr.firdes.WIN_HANN)
-    self.tuner = gr.freq_xlating_fir_filter_ccf(first_decim, taps, self.offset, sample_rate)
+    taps = firdes.low_pass(1.0, sample_rate, options.low_pass, options.low_pass * 0.2, firdes.WIN_HANN)
+    self.tuner = filter.freq_xlating_fir_filter_ccf(first_decim, taps, self.offset, sample_rate)
 
     self.demod = cqpsk.cqpsk_demod(
         samples_per_symbol = sps,
@@ -82,17 +84,19 @@ class top_block(grc_wxgui.top_block_gui):
         log=options.log,
         verbose=options.verbose)
 
-    self.output = gr.file_sink(gr.sizeof_float, options.output_file)
+    self.output = blocks.file_sink(gr.sizeof_float, options.output_file)
 
-    rerate = float(sample_rate / float(first_decim)) / float(out_sample_rate)
+    rerate = float(sample_rate) / float(first_decim) / float(out_sample_rate)
     sys.stderr.write("resampling factor: %f\n" % rerate)
 
     if rerate.is_integer():
         sys.stderr.write("using pfb decimator\n")
-        self.resamp = blks2.pfb_decimator_ccf(int(rerate))
+        #self.resamp = filter.pfb_decimator_ccf(int(rerate), firdes.low_pass(1,int(sample_rate), 50000,5000), 1)
+        self.resamp = filter.fir_filter_ccf(int(rerate), firdes.low_pass(1,int(sample_rate/first_decim), 50000,5000))
     else:
         sys.stderr.write("using pfb resampler\n")
-        self.resamp = blks2.pfb_arb_resampler_ccf(1 / rerate)
+        t = filter.firdes.low_pass_2(32, 32.0*sample_rate/first_decim, 60000, 5000, attenuation_dB=3, window=filter.firdes.WIN_BLACKMAN_hARRIS)
+        self.resamp = filter.pfb_arb_resampler_ccf(1.0/rerate, t, 32)
 
     self.connect(self.src, self.tuner, self.resamp, self.demod, self.output)
 
@@ -220,9 +224,9 @@ class top_block(grc_wxgui.top_block_gui):
         ac_couple=False,
         xy_mode=False,
         num_inputs=1,
-        trig_mode=gr.gr_TRIG_MODE_AUTO,
+        trig_mode=wxgui.TRIG_MODE_AUTO,
         y_axis_label="Counts",
-	)
+    )
     self.Main.GetPage(2).Add(self.scope3.win)
 
     self.connect(self.demod, self.scope3)

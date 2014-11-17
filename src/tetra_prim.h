@@ -9,7 +9,7 @@
 
 enum tetra_saps {
 	TETRA_SAP_TP,	/* between PHY and lower MAC */
-	TETRA_SAP_TMV,	/* beetween lower and upper MAC */
+	TETRA_SAP_TMV,	/* between lower and upper MAC */
 	TETRA_SAP_TMA,
 	TETRA_SAP_TMB,
 	TETRA_SAP_TMD,

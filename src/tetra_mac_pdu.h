@@ -36,6 +36,13 @@ enum tetra_bs_serv_details {
 	BS_SERVDET_ADV_LINK	= (1 << 0),
 };
 
+enum tetra_mac_optional_field_flags {
+	TETRA_MAC_OPT_FIELD_EVEN_MULTIFRAME = 0,
+	TETRA_MAC_OPT_FIELD_ODD_MULTIFRAME  = 1,
+	TETRA_MAC_OPT_FIELD_ACCESS_CODE     = 2,
+	TETRA_MAC_OPT_FIELD_EXT_SERVICES    = 3
+};
+
 const char *tetra_get_bs_serv_det_name(uint32_t pdu_type);
 
 struct tetra_mle_si_decoded {
@@ -59,6 +66,12 @@ struct tetra_si_decoded {
 	union {
 		uint16_t cck_id;
 		uint16_t hyperframe_number;
+	};
+	uint8_t option_field;
+	union {
+		uint32_t frame_bitmap;
+		uint32_t access_code;
+		uint32_t ext_service;
 	};
 	struct tetra_mle_si_decoded mle_si;
 };

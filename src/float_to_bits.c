@@ -71,6 +71,9 @@ static void sym_int2bits(int sym, uint8_t *ret)
 	}
 }
 
+// size of IO buffers (number of elements)
+#define BUF_SIZE 1024
+
 int main(int argc, char **argv)
 {
 	int fd, fd_out, opt;
@@ -104,21 +107,27 @@ int main(int argc, char **argv)
 	}
 	while (1) {
 		int rc;
-		float fl;
-		uint8_t bits[2];
-		rc = read(fd, &fl, sizeof(fl));
+		float fl[BUF_SIZE];
+		uint8_t bits[2*BUF_SIZE];
+		rc = read(fd, fl, sizeof(*fl) * BUF_SIZE);
 		if (rc < 0) {
 			perror("read");
 			exit(1);
-		} else if (rc == 0)
+		} else if (rc == 0) {
 			break;
-		rc = process_sym_fl(fl);
-		sym_int2bits(rc, bits);
-		//printf("%2d %1u %1u  %f\n", rc, bits[0], bits[1], fl);
-		if (opt_verbose)
-			printf("%1u%1u", bits[0], bits[1]);
+		}
+		rc /= sizeof(*fl);
+		int i;
+		for (i = 0; i < rc; ++i) {
+			int sym = process_sym_fl(fl[i]);
+			sym_int2bits(sym, bits + i*2);
+			//printf("%2d %1u %1u  %f\n", rc, bits[0], bits[1], fl);
+			if (opt_verbose) {
+				printf("%1u%1u", bits[2*i + 0], bits[2*i + 1]);
+			}
+		}
 
-		rc = write(fd_out, bits, 2);
+		rc = write(fd_out, bits, rc * 2);
 		if (rc < 0) {
 			perror("write");
 			exit(1);
