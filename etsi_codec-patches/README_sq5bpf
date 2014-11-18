@@ -1,0 +1,24 @@
+Obtaining and compiling the tetra speech codec
+(c) 2014 Jacek Lipkowski <sq5bpf@lipkowski.org>
+
+Please read the file README first, and also:
+http://tetra.osmocom.org/trac/wiki/Speech_Codec
+
+Modified instructions as of 20141118 (differs from the osmocom description,
+the ETSI site looks different now):
+
+In order to obtain the codec, follow the following procedure:
+
+    * go to http://pda.etsi.org/
+    * enter "en 300 395-2" as search term
+    * execute the search, there should a result called "REN/TETRA-05059 "
+    * click on the 'Download icon' link (zip-vice symbol)
+    * you should now have a file called en_30039502v010301p0.zip 
+
+The en_30039502v010301p0.zip file has 361169 bytes, and has the md5sum: 
+a8115fe68ef8f8cc466f4192572a1e3e
+
+
+For compiling please use only the codec.diff patch (which has all of the other patches
+included + various other fixes), and compile in a 32-bit environment (64-bit segfaults).
+
