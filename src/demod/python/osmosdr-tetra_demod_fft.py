@@ -43,6 +43,8 @@ class top_block(grc_wxgui.top_block_gui):
     self.src = osmosdr.source_c(options.args)
     self.src.set_center_freq(self.ifreq)
     self.src.set_sample_rate(int(options.sample_rate))
+    #sq5bpf: dodalem ppm
+    self.src.set_freq_corr(8)
 
     if self.rfgain is None:
         self.src.set_gain_mode(1)
@@ -167,15 +169,19 @@ class top_block(grc_wxgui.top_block_gui):
     self.Add(self.Main)
 
     def fftsink2_callback(x, y):
+        x=x-self.ifreq
+	sys.stderr.write("sq5bpf: x: %d \n" % x)
         if abs(x / (sample_rate / 2)) > 0.9:
             set_ifreq(self.ifreq + x / 2)
         else:
             self.offset = -x
             sys.stderr.write("coarse tuned to: %d Hz => %d Hz\n" % (self.offset, (self.ifreq + self.offset)))
             self.tuner.set_center_freq(self.offset)
+            self._rxfreq_text_box.set_value(self.ifreq-self.offset) #sq5bpf
 
     self.scope = fftsink2.fft_sink_c(self.Main.GetPage(0).GetWin(),
         title="Wideband Spectrum (click to coarse tune)",
+	baseband_freq=self.ifreq, #sq5bpf
         fft_size=1024,
         sample_rate=sample_rate,
         ref_scale=2.0,
@@ -194,6 +200,7 @@ class top_block(grc_wxgui.top_block_gui):
         self.offset = self.offset - (x / 10)
         sys.stderr.write("fine tuned to: %d Hz => %d Hz\n" % (self.offset, (self.ifreq + self.offset)))
         self.tuner.set_center_freq(self.offset)
+        self._rxfreq_text_box.set_value(self.ifreq-self.offset) #sq5bpf
 
     self.scope2 = fftsink2.fft_sink_c(self.Main.GetPage(1).GetWin(),
         title="Channel Spectrum (click to fine tune)",
@@ -227,6 +234,15 @@ class top_block(grc_wxgui.top_block_gui):
     self.Main.GetPage(2).Add(self.scope3.win)
 
     self.connect(self.demod, self.scope3)
+#sq5bpf
+    self._rxfreq_text_box = forms.text_box(
+        parent=self.GetWin(),
+        value=self.ifreq-self.offset,
+        label="RX Freq",
+        converter=forms.float_converter(),
+    )
+    self.Add(self._rxfreq_text_box)
+
 
 def get_options():
     parser = OptionParser(option_class=eng_option)
