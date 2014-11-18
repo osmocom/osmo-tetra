@@ -34,6 +34,12 @@
 #include <phy/tetra_burst_sync.h>
 #include "tetra_gsmtap.h"
 
+/* sq5bpf */
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
 void *tetra_tall_ctx;
 
 int main(int argc, char **argv)
@@ -51,6 +57,26 @@ int main(int argc, char **argv)
 	if (fd < 0) {
 		perror("open");
 		exit(2);
+	}
+	/* sq5bpf */
+	memset((void *)&tetra_hack_db,0,sizeof(tetra_hack_db));
+	tetra_hack_live_idx=0;
+	tetra_hack_live_lastseen=0;
+	tetra_hack_live_socket=0;
+
+	if (getenv("TETRA_HACK_PORT")) {
+		tetra_hack_rxid=atoi(getenv("TETRA_HACK_RXID"));
+	} else
+	{
+		tetra_hack_rxid=0;
+	}
+	if (getenv("TETRA_HACK_PORT")) {
+		tetra_hack_live_socket=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+		tetra_hack_socklen=sizeof(struct sockaddr_in);
+		tetra_hack_live_sockaddr.sin_family = AF_INET;
+		tetra_hack_live_sockaddr.sin_port = htons(atoi(getenv("TETRA_HACK_PORT")));
+		inet_aton("127.0.0.1", & tetra_hack_live_sockaddr.sin_addr);
+		if (tetra_hack_live_socket<1) tetra_hack_live_socket=0;
 	}
 
 	tetra_gsmtap_init("localhost", 0);

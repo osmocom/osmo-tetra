@@ -39,6 +39,13 @@
 #include "tetra_upper_mac.h"
 #include <lower_mac/viterbi.h>
 
+/*sq5bpf*/
+#include<time.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
 struct tetra_blk_param {
 	const char *name;
 	uint16_t type345_bits;
@@ -154,6 +161,7 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 	struct tmv_unitdata_param *tup;
 
 	struct msgb *msg;
+	unsigned char tmpstr[1380+6]; 
 
 	ttp = tmvsap_prim_alloc(PRIM_TMV_UNITDATA, PRIM_OP_INDICATION);
 	tup = &ttp->u.unitdata;
@@ -206,7 +214,7 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 			printf("OK\n");
 			tup->crc_ok = 1;
 			printf("%s %s type1: %s\n", tbp->name, time_str,
-				osmo_ubit_dump(type2, tbp->type1_bits));
+					osmo_ubit_dump(type2, tbp->type1_bits));
 		} else
 			printf("WRONG\n");
 	} else if (type == TPSAP_T_BBK) {
@@ -216,7 +224,6 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 		DEBUGP("%s %s type1: %s\n", tbp->name, time_str,
 			osmo_ubit_dump(type2, tbp->type1_bits));
 	}
-
 	msg->l1h = msgb_put(msg, tbp->type1_bits);
 	memcpy(msg->l1h, type2, tbp->type1_bits);
 
@@ -240,6 +247,12 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 		/* update the PHY layer time */
 		memcpy(&t_phy_state.time, &tcd->time, sizeof(t_phy_state.time));
 		tup->lchan = TETRA_LC_BSCH;
+		/* send bursts for further processing --sq5bpf */
+
+		snprintf(tmpstr,sizeof(tmpstr)-1,"TETMON_begin FUNC:NETINFO1 CCODE:%2.2x MCC:%4.4x MNC:%4.4x DLF:%i ULF:%i RX:%i TETMON_end",tcd->colour_code,tcd->mcc,tcd->mnc,tetra_hack_dl_freq,tetra_hack_ul_freq,tetra_hack_rxid);
+		//sendto(tetra_hack_live_socket, (char *)&tmpstr, strlen(tmpstr), 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
+		sendto(tetra_hack_live_socket, (char *)&tmpstr, 128, 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
+		//printf("\nSQ5BPF MESSAGE [%s]\n",tmpstr);
 		break;
 	case TPSAP_T_SB2:
 	case TPSAP_T_NDB:
@@ -250,6 +263,39 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 		break;
 	case TPSAP_T_SCH_F:
 		tup->lchan = TETRA_LC_SCH_F;
+
+		/* send voice frames for further processing --sq5bpf */
+		if (tms->cur_burst.is_traffic)
+		{
+			int16_t block[690];
+			FILE *f;
+			int i;
+
+
+			/* Generate a block */
+			memset(block, 0x00, sizeof(int16_t) * 690);
+			for (i=0; i<6; i++)
+				block[115*i] = 0x6b21 + i;
+
+			for (i=0; i<114; i++)
+				block[ 1+i] = type4[ i] ? -127 : 127;
+
+			for (i=0; i<114; i++)
+				block[116+i] = type4[114+i] ? -127 : 127;
+
+			for (i=0; i<114; i++)
+				block[231+i] = type4[228+i] ? -127 : 127;
+
+			for (i=0; i<90; i++)
+				block[346+i] = type4[342+i] ? -127 : 127;
+
+			sprintf(tmpstr,"TRA%2.2x\0",tms->cur_burst.is_traffic);
+			memcpy(tmpstr+6,block,sizeof(block));
+
+			sendto(tetra_hack_live_socket, (char *)&tmpstr, sizeof(block)+6, 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
+
+		}
+			/* sq5bpf: koniec */
 		break;
 	default:
 		/* FIXME: do something */

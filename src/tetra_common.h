@@ -5,6 +5,11 @@
 #include "tetra_mac_pdu.h"
 #include <osmocom/core/linuxlist.h>
 
+#include <time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
 #ifdef DEBUG
 #define DEBUGP(x, args...)	printf(x, ## args)
 #else
@@ -33,8 +38,38 @@ enum tetra_log_chan {
 
 	/* FIXME: QAM */
 };
-
 uint32_t bits_to_uint(const uint8_t *bits, unsigned int len);
+
+
+/* tetra hack --sq5bpf */
+#define HACK_MAX_TIME 5
+#define HACK_LIVE_MAX_TIME 1
+#define HACK_NUM_STRUCTS 256
+struct tetra_hack_struct {
+	uint32_t ssi;
+	uint32_t ssi2;
+	time_t lastseen;
+	int is_encr;
+	char curfile[100];
+	char comment[100];
+	uint16_t callident;
+	int seen; //czy juz to widzielismy
+};
+
+struct  tetra_hack_struct tetra_hack_db[HACK_NUM_STRUCTS];
+
+
+int tetra_hack_live_socket;
+struct sockaddr_in tetra_hack_live_sockaddr;
+int tetra_hack_socklen;
+
+int tetra_hack_live_idx;
+int tetra_hack_live_lastseen;
+int tetra_hack_rxid;
+
+uint32_t tetra_hack_dl_freq, tetra_hack_ul_freq;
+
+/* end tetra hack --sq5bpf */
 
 #include "tetra_tdma.h"
 struct tetra_phy_state {
