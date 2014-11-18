@@ -6,6 +6,6 @@ export TETRA_HACK_RXID=$1
 FIFO=/tmp/fifo$1
 mkfifo $FIFO
 ulimit -c unlimited
-demod/python/simdemod.py -o /dev/stdout -i $FIFO | ./float_to_bits /dev/stdin /dev/stdout | ./tetra-rx /dev/stdin 
+demod/python/simdemod2.py -o /dev/stdout -i $FIFO | ./float_to_bits /dev/stdin /dev/stdout | ./tetra-rx /dev/stdin 
 
 
