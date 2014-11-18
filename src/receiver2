@@ -1,0 +1,11 @@
+#!/bin/sh
+# This is an example how to use simdemod.py --sq5bpf
+# this is receiver 1, only with the port changed, it will be used in the example documentation
+export TETRA_HACK_PORT=7380 #i might as well have made this a command line parameter, oh well :)
+export TETRA_HACK_RXID=$1
+FIFO=/tmp/fifo$1
+mkfifo $FIFO
+ulimit -c unlimited
+demod/python/simdemod.py -o /dev/stdout -i $FIFO | ./float_to_bits /dev/stdin /dev/stdout | ./tetra-rx /dev/stdin 
+
+
