@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
+#include <ctype.h>
 #include <osmocom/core/utils.h>
 #include <osmocom/core/msgb.h>
 #include <osmocom/core/talloc.h>
@@ -37,6 +37,7 @@
 #include "tetra_sndcp_pdu.h"
 #include "tetra_mle_pdu.h"
 #include "tetra_gsmtap.h"
+#include "tetra_sds.h"
 
 static int rx_tm_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len);
 
@@ -63,6 +64,10 @@ static void rx_bcast(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 
 	printf("BNCH SYSINFO (DL %u Hz, UL %u Hz), service_details 0x%04x ",
 		dl_freq, ul_freq, sid.mle_si.bs_service_details);
+	/* sq5bpf */
+	tetra_hack_dl_freq=dl_freq;
+	tetra_hack_ul_freq=ul_freq;
+	
 	if (sid.cck_valid_no_hf)
 		printf("CCK ID %u", sid.cck_id);
 	else
@@ -97,38 +102,338 @@ const char *tetra_alloc_dump(const struct tetra_chan_alloc_decoded *cad, struct 
 	return buf;
 }
 
+/* sq5bpf */
+int parse_d_release(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len)
+{
+	uint8_t *bits = msg->l3h+3;
+	int n=0;
+	int m=0;
+
+	/* strona 270 */
+	m=5; uint8_t pdu_type=bits_to_uint(bits+n, m); n=n+m;
+	m=14; uint16_t callident=bits_to_uint(bits+n, m); n=n+m;
+	m=4; uint16_t disccause=bits_to_uint(bits+n, m); n=n+m;
+	m=6; uint16_t notifindic=bits_to_uint(bits+n, m); n=n+m;
+	printf("\nCall identifier:%i Discconnect cause:%i NotificationID:%i\n",callident,disccause,notifindic);
+
+}
+
+
+uint parse_d_setup(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len)
+{
+	uint8_t *bits = msg->l3h+3;
+	int n=0;
+	int m=0;
+	uint32_t callingssi=0;
+	uint32_t callingext=0;
+	char tmpstr2[1024];
+	struct tetra_resrc_decoded rsd;
+	int tmpdu_offset;
+	memset(&rsd, 0, sizeof(rsd));
+	tmpdu_offset = macpdu_decode_resource(&rsd, msg->l1h);
+
+
+
+	/* strona 270, opisy strona 280 */
+	m=5; uint8_t pdu_type=bits_to_uint(bits+n, m); n=n+m;
+
+	m=14; uint16_t callident=bits_to_uint(bits+n, m); n=n+m;
+	m=4; uint16_t calltimeout=bits_to_uint(bits+n, m);  n=n+m;
+	m=1; uint16_t hookmethod=bits_to_uint(bits+n, m); n=n+m;
+	m=1; uint16_t duplex=bits_to_uint(bits+n, m); n=n+m;
+	m=8; uint8_t basicinfo=bits_to_uint(bits+n, m); n=n+m;
+	m=2; uint16_t txgrant=bits_to_uint(bits+n, m); n=n+m;
+	m=1; uint16_t txperm=bits_to_uint(bits+n, m); n=n+m;
+	m=4; uint16_t callprio=bits_to_uint(bits+n, m); n=n+m;
+	m=6; uint16_t notifindic=bits_to_uint(bits+n, m); n=n+m;
+	m=24; uint32_t tempaddr=bits_to_uint(bits+n, m); n=n+m;
+	m=2; uint16_t cpti=bits_to_uint(bits+n, m); n=n+m;
+	switch(cpti)
+	{
+		case 0: /* SNA */
+			m=8; callingssi=bits_to_uint(bits+n, m); n=n+m;
+			break;
+		case 1: /* SSI */
+			m=24; callingssi=bits_to_uint(bits+n, m); n=n+m;
+			break;
+		case 2: /* TETRA Subscriber Identity (TSI) */
+			m=24; callingssi=bits_to_uint(bits+n, m); n=n+m;
+			m=24; callingext=bits_to_uint(bits+n, m); n=n+m;
+			break;
+		case 3: /* reserved ? */
+			break;
+	}
+
+
+	printf ("\nCall identifier:%i  Call timeout:%i  Hookmethod:%i  Duplex:%i\n",callident,calltimeout,hookmethod,duplex);
+	printf("Basicinfo:0x%2.2X  Txgrant:%i  TXperm:%i  Callprio:%i\n",basicinfo,txgrant,txperm,callprio);
+	printf("NotificationID:%i  Tempaddr:%i CPTI:%i  CallingSSI:%i  CallingExt:%i\n",notifindic,tempaddr,cpti,callingssi,callingext);
+
+	sprintf(tmpstr2,"TETMON_begin FUNC:DSETUPDEC IDX:%i SSI:%i RX:%i TETMON_end",rsd.addr.usage_marker,tempaddr,tetra_hack_rxid);
+	sendto(tetra_hack_live_socket, (char *)&tmpstr2, strlen((char *)&tmpstr2)+1, 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
+
+}
+
+uint parse_d_sds_data(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len)
+{
+	/* strona  269, 297, 1072, 1075 */
+	uint8_t *bits = msg->l3h+3;
+
+	int n=0;
+	int l,a;
+	int m=5;
+
+	uint8_t pdu_type;
+	uint8_t cpti;
+	uint32_t calling_ssi;
+	uint32_t calling_ext=0;
+	uint8_t sdti;
+	uint8_t udata[512];
+	uint16_t datalen=0;
+	uint8_t protoid;
+	uint8_t reserved1;
+	uint8_t coding_scheme;
+	char descr[1024];
+	char tmpstr[128];
+	char tmpstr2[1024];
+
+	struct tetra_resrc_decoded rsd;
+	int tmpdu_offset;
+	memset(&rsd, 0, sizeof(rsd));
+	tmpdu_offset = macpdu_decode_resource(&rsd, msg->l1h);
+
+
+
+	m=5; pdu_type=bits_to_uint(bits+n, m); n=n+m;
+	m=2; cpti=bits_to_uint(bits+n, m); n=n+m;
+	switch(cpti) {
+		case 1:
+			m=24; calling_ssi=bits_to_uint(bits+n, m); n=n+m;
+			break;
+		case 2:
+			m=24; calling_ssi=bits_to_uint(bits+n, m); n=n+m;
+			m=24; calling_ext=bits_to_uint(bits+n, m); n=n+m;
+			break;
+		default:
+			/* hgw co to jest */
+			printf("\nparse_d_sds_data: ZLY CPTI %i\n",cpti);
+			return(1);
+			break;
+	}
+
+	sprintf(descr,"CPTI:%i CalledSSI:%i CallingSSI:%i CallingEXT:%i ",cpti,rsd.addr.ssi,calling_ssi,calling_ext);
+
+	m=2; sdti=bits_to_uint(bits+n, m); n=n+m;
+
+	switch(sdti) {
+		case 0: /* user defined data-1 16 bit */
+			datalen=2;
+			m=8;
+			for(l=0;l<datalen;l++) {
+				udata[l]=bits_to_uint(bits+n, m); n=n+m;
+			}
+			sprintf(tmpstr," UserData1: 0x%2.2X 0x%2.2X",udata[0],udata[1]);
+			strcat(descr,tmpstr);
+
+			break;
+		case 1: /* user defined data-2 32 bit */
+			datalen=4;
+			m=8;
+			for(l=0;l<datalen;l++) {
+				udata[l]=bits_to_uint(bits+n, m); n=n+m;
+			}
+			sprintf(tmpstr,"UserData2: 0x%2.2X 0x%2.2X 0x%2.2X 0x%2.2X",udata[0],udata[1],udata[2],udata[3]);
+			strcat(descr,tmpstr);
+			break;
+		case 2: /* user defined data-3 64 bit */
+			datalen=8;
+			m=8;
+			for(l=0;l<datalen;l++) {
+				udata[l]=bits_to_uint(bits+n, m); n=n+m;
+
+			}
+			sprintf(tmpstr," UserData3: 0x%2.2X 0x%2.2X 0x%2.2X 0x%2.2X 0x%2.2X 0x%2.2X 0x%2.2X 0x%2.2X",udata[0],udata[1],udata[2],udata[3],udata[4],udata[5],udata[6],udata[7]);
+			strcat(descr,tmpstr);
+			break;
+		case 3: /* length indicator + user defined data-4 bit */
+			m=11; datalen=bits_to_uint(bits+n, m); n=n+m;
+			m=8; protoid=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
+			//sprintf(tmpstr," UserData4: len:%i protoid:%2.2X(%s) coding:%2.2x ",datalen,protoid,get_sds_type(protoid),coding_scheme);
+			sprintf(tmpstr," UserData4: len:%i protoid:%2.2X(%s) coding:%2.2x ",datalen,protoid,get_sds_type(protoid),coding_scheme);
+			strcat(descr,tmpstr);
+
+			uint8_t c;
+
+			if ((protoid==TETRA_SDS_PROTO_TXTMSG)||(protoid==TETRA_SDS_PROTO_SIMPLE_TXTMSG)||(protoid==TETRA_SDS_PROTO_SIMPLE_ITXTMSG)||(protoid==TETRA_SDS_PROTO_ITXTMSG)) {
+				m=1; reserved1=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
+				m=7; coding_scheme=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
+				sprintf(tmpstr," coding:%2.2x ",coding_scheme);
+				strcat(descr,tmpstr);
+
+				sprintf(tmpstr,"DATA:[");
+				strcat(descr,tmpstr);
+
+				/* dump text message */
+				switch(coding_scheme) {
+					case 0: /* 7-bit gsm encoding */
+						sprintf(tmpstr," *7bit* ");
+						strcat(descr,tmpstr);
+						m=8;
+						l=0;
+						while(datalen>=m) {
+							udata[l]=bits_to_uint(bits+n, m); n=n+m;
+							l++;
+							datalen=datalen-m;
+						}
+						/* TODO: maybe skip the first two bytes? i've never seen a 7-bit SDS in the wild --sq5bpf */
+						datalen=decode_pdu(tmpstr2,udata,l);
+						/* dump */
+						for(a=0;a<datalen;a++) {
+							if (isprint(tmpstr2[a])) {
+								sprintf(tmpstr,"%c",tmpstr2[a]);
+							}
+							else {
+								sprintf(tmpstr,"\\x%2.2X",tmpstr2[a]);
+							}
+							strcat(descr,tmpstr);
+
+
+						}
+						strcat(descr,"]\n");
+
+
+						break;
+					case 0x1A: /* SO/IEC 10646-1 [22] UCS-2/UTF-16BE (16-bit) alphabet */
+						/* TODO: use iconv or whatever else
+						 * for now we'll just use the 8-bit decoding function, 
+						 * every other bit will be written as \x00. ugly but readable --sq5bpf 
+						 */
+
+						sprintf(tmpstr," *UTF16* ");
+						strcat(descr,tmpstr);
+
+					default: /* 8-bit */
+						m=8;
+						l=0;
+						while(datalen>=m) {
+							udata[l]=bits_to_uint(bits+n, m); n=n+m;
+							l++;
+							datalen=datalen-m;
+						}
+						/* TODO: the first two bytes are often garbage. either parse it or skip it 
+						 * i guess i'll have to read the etsi specifications better --sq5bpf */
+
+						for(a=0;a<l;a++) {
+							if (isprint(udata[a])) {
+								sprintf(tmpstr,"%c",udata[a]);
+							}
+							else {
+								sprintf(tmpstr,"\\x%2.2X",udata[a]);
+							}
+							strcat(descr,tmpstr);
+
+
+						}
+						strcat(descr,"]\n");
+						break;
+				}
+			} 
+			else
+			{
+				sprintf(tmpstr,"DATA:[");
+				strcat(descr,tmpstr);
+				/* other message */
+				/* hexdump */
+				m=8;
+				l=0;
+				while(datalen>=m) {
+					udata[l]=bits_to_uint(bits+n, m); n=n+m;
+					l++;
+					datalen=datalen-m;
+				}
+				/* dump */
+				for(a=0;a<l;a++) {
+					sprintf(tmpstr,"0x%2.2X ",udata[a]);
+					strcat(descr,tmpstr);
+				}
+				strcat(descr,"]\n");
+			}
+
+
+	}
+
+
+
+	printf("%s\n",descr);
+	sprintf(tmpstr2,"TETMON_begin FUNC:SDSDEC [%s] RX:%i TETMON_end",descr,tetra_hack_rxid);
+	sendto(tetra_hack_live_socket, (char *)&tmpstr2, strlen((char *)&tmpstr2)+1, 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
+	/*  We'll just ignore these for now :)
+	 *  External subscriber number
+	 *  DM-MS address
+	 */
+
+}
+
+
+
 /* Receive TL-SDU (LLC SDU == MLE PDU) */
 static int rx_tl_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len)
 {
 	uint8_t *bits = msg->l3h;
 	uint8_t mle_pdisc = bits_to_uint(bits, 3);
-
+	char tmpstr[1024];
 	printf("TL-SDU(%s): %s", tetra_get_mle_pdisc_name(mle_pdisc),
-		osmo_ubit_dump(bits, len));
+			osmo_ubit_dump(bits, len));
 	switch (mle_pdisc) {
-	case TMLE_PDISC_MM:
-		printf(" %s", tetra_get_mm_pdut_name(bits_to_uint(bits+3, 4), 0));
-		break;
-	case TMLE_PDISC_CMCE:
-		printf(" %s", tetra_get_cmce_pdut_name(bits_to_uint(bits+3, 5), 0));
-		break;
-	case TMLE_PDISC_SNDCP:
-		printf(" %s", tetra_get_sndcp_pdut_name(bits_to_uint(bits+3, 4), 0));
-		printf(" NSAPI=%u PCOMP=%u, DCOMP=%u",
-			bits_to_uint(bits+3+4, 4),
-			bits_to_uint(bits+3+4+4, 4),
-			bits_to_uint(bits+3+4+4+4, 4));
-		printf(" V%u, IHL=%u",
-			bits_to_uint(bits+3+4+4+4+4, 4),
-			4*bits_to_uint(bits+3+4+4+4+4+4, 4));
-		printf(" Proto=%u",
-			bits_to_uint(bits+3+4+4+4+4+4+4+64, 8));
-		break;
-	case TMLE_PDISC_MLE:
-		printf(" %s", tetra_get_mle_pdut_name(bits_to_uint(bits+3, 3), 0));
-		break;
-	default:
-		break;
+		case TMLE_PDISC_MM:
+			printf(" %s", tetra_get_mm_pdut_name(bits_to_uint(bits+3, 4), 0));
+			break;
+		case TMLE_PDISC_CMCE:
+			printf(" %s", tetra_get_cmce_pdut_name(bits_to_uint(bits+3, 5), 0));
+
+			/* sq5bpf */
+			switch(bits_to_uint(bits+3, 5)) {
+				case TCMCE_PDU_T_D_SETUP:
+					parse_d_setup(tms,msg,len);
+					break;
+
+				case TCMCE_PDU_T_D_RELEASE:
+					parse_d_release(tms,msg,len);
+					break;
+
+				case TCMCE_PDU_T_D_SDS_DATA:
+					sprintf(tmpstr,"TETMON_begin FUNC:SDS [%s] TETMON_end",osmo_ubit_dump(bits, len));
+					sendto(tetra_hack_live_socket, (char *)&tmpstr, strlen((char *)&tmpstr)+1, 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
+					parse_d_sds_data(tms,msg,len);
+					break;
+
+
+
+					/*				case TCMCE_PDU_T_U_SDS_DATA:
+									sprintf(tmpstr,"TETMON_begin FUNC:D-SDS [%s] TETMON_end",osmo_ubit_dump(bits, len));
+									sendto(tetra_hack_live_socket, (char *)&tmpstr, strlen((char *)&tmpstr)+1, 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
+									break;
+									*/
+			}
+
+			break;
+		case TMLE_PDISC_SNDCP:
+			printf(" %s", tetra_get_sndcp_pdut_name(bits_to_uint(bits+3, 4), 0));
+			printf(" NSAPI=%u PCOMP=%u, DCOMP=%u",
+					bits_to_uint(bits+3+4, 4),
+					bits_to_uint(bits+3+4+4, 4),
+					bits_to_uint(bits+3+4+4+4, 4));
+			printf(" V%u, IHL=%u",
+					bits_to_uint(bits+3+4+4+4+4, 4),
+					4*bits_to_uint(bits+3+4+4+4+4+4, 4));
+			printf(" Proto=%u",
+					bits_to_uint(bits+3+4+4+4+4+4+4+64, 8));
+			break;
+		case TMLE_PDISC_MLE:
+			printf(" %s", tetra_get_mle_pdut_name(bits_to_uint(bits+3, 3), 0));
+			break;
+		default:
+			break;
 	}
 	return len;
 }
@@ -142,7 +447,7 @@ static int rx_tm_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int
 	tetra_llc_pdu_parse(&lpp, bits, len);
 
 	printf("TM-SDU(%s,%u,%u): ",
-		tetra_get_llc_pdut_dec_name(lpp.pdu_type), lpp.ns, lpp.ss);
+			tetra_get_llc_pdut_dec_name(lpp.pdu_type), lpp.ns, lpp.ss);
 	if (lpp.tl_sdu && lpp.ss == 0) {
 		msg->l3h = lpp.tl_sdu;
 		rx_tl_sdu(tms, msg, lpp.tl_sdu_len);
@@ -155,24 +460,25 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 	struct msgb *msg = tmvp->oph.msg;
 	struct tetra_resrc_decoded rsd;
 	int tmpdu_offset;
+	char tmpstr[1380];
+	time_t tp=time(0);
 
 	memset(&rsd, 0, sizeof(rsd));
 	tmpdu_offset = macpdu_decode_resource(&rsd, msg->l1h);
 	msg->l2h = msg->l1h + tmpdu_offset;
 
 	printf("RESOURCE Encr=%u, Length=%d Addr=%s ",
-		rsd.encryption_mode, rsd.macpdu_length,
-		tetra_addr_dump(&rsd.addr));
+			rsd.encryption_mode, rsd.macpdu_length,
+			tetra_addr_dump(&rsd.addr));
 
 	if (rsd.addr.type == ADDR_TYPE_NULL)
 		goto out;
 
 	if (rsd.chan_alloc_pres)
 		printf("ChanAlloc=%s ", tetra_alloc_dump(&rsd.cad, tms));
-
 	if (rsd.slot_granting.pres)
 		printf("SlotGrant=%u/%u ", rsd.slot_granting.nr_slots,
-			rsd.slot_granting.delay);
+				rsd.slot_granting.delay);
 
 	if (rsd.macpdu_length > 0 && rsd.encryption_mode == 0) {
 		int len_bits = rsd.macpdu_length*8;
@@ -180,8 +486,37 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 			len_bits = msgb_l1len(msg) - tmpdu_offset;
 		rx_tm_sdu(tms, msg, len_bits);
 	}
-
 out:
+
+	/* sq5bpf */
+	//if (rsd.encryption_mode==0) 
+	{
+		uint8_t *bits = msg->l3h;
+		uint8_t mle_pdisc=0;
+		uint8_t	req_type=0;
+		uint16_t callident=0;
+		int i;
+
+
+		if (bits) {
+			mle_pdisc= bits_to_uint(bits, 3);
+			req_type=bits_to_uint(bits+3, 5);
+			callident=bits_to_uint(bits+8, 14);
+		}
+		printf("sq5bpf req mle_pdisc=%i req=%i ",mle_pdisc,req_type);
+
+		if (mle_pdisc==TMLE_PDISC_CMCE) {
+
+			sprintf(tmpstr,"TETMON_begin FUNC:%s SSI:%8.8i IDX:%3.3i IDT:%i ENCR:%i RX:%i TETMON_end",tetra_get_cmce_pdut_name(req_type, 0),rsd.addr.ssi,rsd.addr.usage_marker,rsd.addr.type,rsd.encryption_mode,tetra_hack_rxid);
+			sendto(tetra_hack_live_socket, (char *)&tmpstr, 128, 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
+			//printf("\nSQ5BPF KOMUNIKAT: [%s]\n",tmpstr);
+		}
+
+
+
+	}
+
+
 	printf("\n");
 }
 
@@ -208,8 +543,8 @@ static void rx_suppl(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 	printf("SUPPLEMENTARY MAC-D-BLOCK ");
 
 	//if (sud.encryption_mode == 0)
-		msg->l2h = msg->l1h + tmpdu_offset;
-		rx_tm_sdu(tms, msg, 100);
+	msg->l2h = msg->l1h + tmpdu_offset;
+	rx_tm_sdu(tms, msg, 100);
 
 	printf("\n");
 }
@@ -228,7 +563,7 @@ static void rx_aach(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms)
 
 	memset(&aad, 0, sizeof(aad));
 	macpdu_decode_access_assign(&aad, tmvp->oph.msg->l1h,
-				    tup->tdma_time.fn == 18 ? 1 : 0);
+			tup->tdma_time.fn == 18 ? 1 : 0);
 
 	if (aad.pres & TETRA_ACC_ASS_PRES_ACCESS1)
 		dump_access(&aad.access[0], 1);
@@ -241,7 +576,8 @@ static void rx_aach(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms)
 
 	/* save the state whether the current burst is traffic or not */
 	if (aad.dl_usage > 3)
-		tms->cur_burst.is_traffic = 1;
+		//sq5bpf tms->cur_burst.is_traffic = 1;
+		tms->cur_burst.is_traffic = aad.dl_usage;
 	else
 		tms->cur_burst.is_traffic = 0;
 
@@ -266,56 +602,56 @@ static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_
 	}
 
 	printf("TMV-UNITDATA.ind %s %s CRC=%u %s\n",
-		tetra_tdma_time_dump(&tup->tdma_time),
-		tetra_get_lchan_name(tup->lchan),
-		tup->crc_ok, pdu_name);
+			tetra_tdma_time_dump(&tup->tdma_time),
+			tetra_get_lchan_name(tup->lchan),
+			tup->crc_ok, pdu_name);
 
 	if (!tup->crc_ok)
 		return 0;
 
 	gsmtap_msg = tetra_gsmtap_makemsg(&tup->tdma_time, tup->lchan,
-					  tup->tdma_time.tn,
-					  /* FIXME: */ 0, 0, 0,
-					msg->l1h, msgb_l1len(msg));
+			tup->tdma_time.tn,
+			/* FIXME: */ 0, 0, 0,
+			msg->l1h, msgb_l1len(msg));
 	if (gsmtap_msg)
 		tetra_gsmtap_sendmsg(gsmtap_msg);
 
 	switch (tup->lchan) {
-	case TETRA_LC_AACH:
-		rx_aach(tmvp, tms);
-		break;
-	case TETRA_LC_BNCH:
-	case TETRA_LC_UNKNOWN:
-	case TETRA_LC_SCH_F:
-		switch (pdu_type) {
-		case TETRA_PDU_T_BROADCAST:
-			rx_bcast(tmvp, tms);
+		case TETRA_LC_AACH:
+			rx_aach(tmvp, tms);
 			break;
-		case TETRA_PDU_T_MAC_RESOURCE:
-			rx_resrc(tmvp, tms);
+		case TETRA_LC_BNCH:
+		case TETRA_LC_UNKNOWN:
+		case TETRA_LC_SCH_F:
+			switch (pdu_type) {
+				case TETRA_PDU_T_BROADCAST:
+					rx_bcast(tmvp, tms);
+					break;
+				case TETRA_PDU_T_MAC_RESOURCE:
+					rx_resrc(tmvp, tms);
+					break;
+				case TETRA_PDU_T_MAC_SUPPL:
+					rx_suppl(tmvp, tms);
+					break;
+				case TETRA_PDU_T_MAC_FRAG_END:
+					if (msg->l1h[3] == TETRA_MAC_FRAGE_FRAG) {
+						printf("FRAG/END FRAG: ");
+						msg->l2h = msg->l1h+4;
+						rx_tm_sdu(tms, msg, 100 /*FIXME*/);
+						printf("\n");
+					} else
+						printf("FRAG/END END\n");
+					break;
+				default:
+					printf("STRANGE pdu=%u\n", pdu_type);
+					break;
+			}
 			break;
-		case TETRA_PDU_T_MAC_SUPPL:
-			rx_suppl(tmvp, tms);
-			break;
-		case TETRA_PDU_T_MAC_FRAG_END:
-			if (msg->l1h[3] == TETRA_MAC_FRAGE_FRAG) {
-				printf("FRAG/END FRAG: ");
-				msg->l2h = msg->l1h+4;
-				rx_tm_sdu(tms, msg, 100 /*FIXME*/);
-				printf("\n");
-			} else
-				printf("FRAG/END END\n");
+		case TETRA_LC_BSCH:
 			break;
 		default:
-			printf("STRANGE pdu=%u\n", pdu_type);
+			printf("STRANGE lchan=%u\n", tup->lchan);
 			break;
-		}
-		break;
-	case TETRA_LC_BSCH:
-		break;
-	default:
-		printf("STRANGE lchan=%u\n", tup->lchan);
-		break;
 	}
 
 	return 0;
@@ -328,13 +664,13 @@ int upper_mac_prim_recv(struct osmo_prim_hdr *op, void *priv)
 	int rc;
 
 	switch (op->sap) {
-	case TETRA_SAP_TMV:
-		tmvp = (struct tetra_tmvsap_prim *) op;
-		rc = rx_tmv_unitdata_ind(tmvp, tms);
-		break;
-	default:
-		printf("primitive on unknown sap\n");
-		break;
+		case TETRA_SAP_TMV:
+			tmvp = (struct tetra_tmvsap_prim *) op;
+			rc = rx_tmv_unitdata_ind(tmvp, tms);
+			break;
+		default:
+			printf("primitive on unknown sap\n");
+			break;
 	}
 
 	talloc_free(op->msg);
