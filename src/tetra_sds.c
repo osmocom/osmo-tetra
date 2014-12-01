@@ -16,7 +16,7 @@ int decode_pdu(char *dec,unsigned char *enc,int len)
 		dec++;
 		outlen++;
 		enc++;
-
+		len--;
 		if (bits==7) {
 			*dec=carry;
 			dec++;
@@ -25,8 +25,8 @@ int decode_pdu(char *dec,unsigned char *enc,int len)
 		}
 	}
 	*dec=0;
+	return(outlen);
 }
-
 
 
 

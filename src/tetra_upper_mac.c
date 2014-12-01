@@ -258,8 +258,7 @@ uint parse_d_sds_data(struct tetra_mac_state *tms, struct msgb *msg, unsigned in
 		case 3: /* length indicator + user defined data-4 bit */
 			m=11; datalen=bits_to_uint(bits+n, m); n=n+m;
 			m=8; protoid=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
-			//sprintf(tmpstr," UserData4: len:%i protoid:%2.2X(%s) coding:%2.2x ",datalen,protoid,get_sds_type(protoid),coding_scheme);
-			sprintf(tmpstr," UserData4: len:%i protoid:%2.2X(%s) coding:%2.2x ",datalen,protoid,get_sds_type(protoid),coding_scheme);
+			sprintf(tmpstr," UserData4: len:%i protoid:%2.2X(%s) ",datalen,protoid,get_sds_type(protoid));
 			strcat(descr,tmpstr);
 
 			uint8_t c;
@@ -267,7 +266,7 @@ uint parse_d_sds_data(struct tetra_mac_state *tms, struct msgb *msg, unsigned in
 			if ((protoid==TETRA_SDS_PROTO_TXTMSG)||(protoid==TETRA_SDS_PROTO_SIMPLE_TXTMSG)||(protoid==TETRA_SDS_PROTO_SIMPLE_ITXTMSG)||(protoid==TETRA_SDS_PROTO_ITXTMSG)) {
 				m=1; reserved1=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
 				m=7; coding_scheme=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
-				sprintf(tmpstr," coding:%2.2x ",coding_scheme);
+				sprintf(tmpstr," coding_scheme:%2.2x ",coding_scheme);
 				strcat(descr,tmpstr);
 
 				sprintf(tmpstr,"DATA:[");
