@@ -62,11 +62,12 @@ static void rx_bcast(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 				      sid.duplex_spacing,
 				      sid.reverse_operation);
 
-	printf("BNCH SYSINFO (DL %u Hz, UL %u Hz), service_details 0x%04x ",
-		dl_freq, ul_freq, sid.mle_si.bs_service_details);
+	printf("BNCH SYSINFO (DL %u Hz, UL %u Hz), service_details 0x%04x LA:%u ",
+		dl_freq, ul_freq, sid.mle_si.bs_service_details,sid.mle_si.la);
 	/* sq5bpf */
 	tetra_hack_dl_freq=dl_freq;
 	tetra_hack_ul_freq=ul_freq;
+	tetra_hack_la=sid.mle_si.la;
 	
 	if (sid.cck_valid_no_hf)
 		printf("CCK ID %u", sid.cck_id);

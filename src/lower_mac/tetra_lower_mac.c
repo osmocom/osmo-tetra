@@ -249,7 +249,7 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 		tup->lchan = TETRA_LC_BSCH;
 		/* send bursts for further processing --sq5bpf */
 
-		snprintf(tmpstr,sizeof(tmpstr)-1,"TETMON_begin FUNC:NETINFO1 CCODE:%2.2x MCC:%4.4x MNC:%4.4x DLF:%i ULF:%i RX:%i TETMON_end",tcd->colour_code,tcd->mcc,tcd->mnc,tetra_hack_dl_freq,tetra_hack_ul_freq,tetra_hack_rxid);
+		snprintf(tmpstr,sizeof(tmpstr)-1,"TETMON_begin FUNC:NETINFO1 CCODE:%2.2x MCC:%4.4x MNC:%4.4x DLF:%i ULF:%i LA:%u RX:%i TETMON_end",tcd->colour_code,tcd->mcc,tcd->mnc,tetra_hack_dl_freq,tetra_hack_ul_freq,tetra_hack_la,tetra_hack_rxid);
 		//sendto(tetra_hack_live_socket, (char *)&tmpstr, strlen(tmpstr), 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
 		sendto(tetra_hack_live_socket, (char *)&tmpstr, 128, 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
 		//printf("\nSQ5BPF MESSAGE [%s]\n",tmpstr);

@@ -68,6 +68,7 @@ int tetra_hack_live_lastseen;
 int tetra_hack_rxid;
 
 uint32_t tetra_hack_dl_freq, tetra_hack_ul_freq;
+uint16_t tetra_hack_la;
 
 /* end tetra hack --sq5bpf */
 
