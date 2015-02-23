@@ -67,4 +67,56 @@ static const struct sds_type sds_types[]=
 char *get_sds_type(uint8_t type);
 int decode_pdu(char *dec,unsigned char *enc,int len);
 
+
+/*************   LIP   ****************/
+/* LIP direction  of travel */
+enum tetra_lip_dirtravelid {
+TETRA_LIP_DIRTRAVEL_N = 0 ,
+TETRA_LIP_DIRTRAVEL_NNE = 1 ,
+TETRA_LIP_DIRTRAVEL_NE = 2 ,
+TETRA_LIP_DIRTRAVEL_ENE = 3 ,
+TETRA_LIP_DIRTRAVEL_E = 4 ,
+TETRA_LIP_DIRTRAVEL_ESE = 5 ,
+TETRA_LIP_DIRTRAVEL_SE = 6 ,
+TETRA_LIP_DIRTRAVEL_SSE = 7 ,
+TETRA_LIP_DIRTRAVEL_S = 8 ,
+TETRA_LIP_DIRTRAVEL_SSW = 9 ,
+TETRA_LIP_DIRTRAVEL_SW = 10 ,
+TETRA_LIP_DIRTRAVEL_WSW = 11 ,
+TETRA_LIP_DIRTRAVEL_W = 12 ,
+TETRA_LIP_DIRTRAVEL_WNW = 13 ,
+TETRA_LIP_DIRTRAVEL_NW = 14 ,
+TETRA_LIP_DIRTRAVEL_NNW = 15 
+};
+struct lip_dirtravel_type {
+	uint8_t type;
+	char * description;
+};
+static const struct lip_dirtravel_type lip_dirtravel_types[]=
+{
+	{ TETRA_LIP_DIRTRAVEL_N , "N" },
+	{ TETRA_LIP_DIRTRAVEL_NNE , "NNE" },
+	{ TETRA_LIP_DIRTRAVEL_NE , "NE" },
+	{ TETRA_LIP_DIRTRAVEL_ENE , "ENE" },
+	{ TETRA_LIP_DIRTRAVEL_E , "E" },
+	{ TETRA_LIP_DIRTRAVEL_ESE , "ESE" },
+	{ TETRA_LIP_DIRTRAVEL_SE , "SE" },
+	{ TETRA_LIP_DIRTRAVEL_SSE , "SSE" },
+	{ TETRA_LIP_DIRTRAVEL_S , "S" },
+	{ TETRA_LIP_DIRTRAVEL_SSW , "SSW" },
+	{ TETRA_LIP_DIRTRAVEL_SW , "SW" },
+	{ TETRA_LIP_DIRTRAVEL_WSW , "WSW" },
+	{ TETRA_LIP_DIRTRAVEL_W , "W" },
+	{ TETRA_LIP_DIRTRAVEL_WNW , "WNW" },
+	{ TETRA_LIP_DIRTRAVEL_NW , "NW" },
+	{ TETRA_LIP_DIRTRAVEL_NNW , "NNW" },
+	{ 0x0,0 }
+};
+
+static const char* const  lip_position_errors[]={ "<2m", "<20m", "<200m", "<2km", "<20km", "=<200km", ">200km", "unknown" };
+int decode_lip(char *out, int outlen,uint8_t *bits,int datalen);
+
+/**************   Location System   **************/
+int decode_locsystem(char *out, int outlen,uint8_t *bits,int datalen);
+
 #endif

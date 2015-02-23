@@ -53,22 +53,22 @@ static void rx_bcast(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 	tmvp->u.unitdata.tdma_time.hn = sid.hyperframe_number;
 
 	dl_freq = tetra_dl_carrier_hz(sid.freq_band,
-				      sid.main_carrier,
-				      sid.freq_offset);
+			sid.main_carrier,
+			sid.freq_offset);
 
 	ul_freq = tetra_ul_carrier_hz(sid.freq_band,
-				      sid.main_carrier,
-				      sid.freq_offset,
-				      sid.duplex_spacing,
-				      sid.reverse_operation);
+			sid.main_carrier,
+			sid.freq_offset,
+			sid.duplex_spacing,
+			sid.reverse_operation);
 
 	printf("BNCH SYSINFO (DL %u Hz, UL %u Hz), service_details 0x%04x LA:%u ",
-		dl_freq, ul_freq, sid.mle_si.bs_service_details,sid.mle_si.la);
+			dl_freq, ul_freq, sid.mle_si.bs_service_details,sid.mle_si.la);
 	/* sq5bpf */
 	tetra_hack_dl_freq=dl_freq;
 	tetra_hack_ul_freq=ul_freq;
 	tetra_hack_la=sid.mle_si.la;
-	
+
 	if (sid.cck_valid_no_hf)
 		printf("CCK ID %u", sid.cck_id);
 	else
@@ -76,7 +76,7 @@ static void rx_bcast(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 	printf("\n");
 	for (i = 0; i < 12; i++)
 		printf("\t%s: %u\n", tetra_get_bs_serv_det_name(1 << i),
-			sid.mle_si.bs_service_details & (1 << i) ? 1 : 0);
+				sid.mle_si.bs_service_details & (1 << i) ? 1 : 0);
 
 	memcpy(&tms->last_sid, &sid, sizeof(sid));
 }
@@ -96,9 +96,9 @@ const char *tetra_alloc_dump(const struct tetra_chan_alloc_decoded *cad, struct 
 	}
 
 	cur += sprintf(cur, "%s (TN%u/%s/%uHz)",
-		tetra_get_alloc_t_name(cad->type), cad->timeslot,
-		tetra_get_ul_dl_name(cad->ul_dl),
-		tetra_dl_carrier_hz(freq_band, cad->carrier_nr, freq_offset));
+			tetra_get_alloc_t_name(cad->type), cad->timeslot,
+			tetra_get_ul_dl_name(cad->ul_dl),
+			tetra_dl_carrier_hz(freq_band, cad->carrier_nr, freq_offset));
 
 	return buf;
 }
@@ -263,101 +263,130 @@ uint parse_d_sds_data(struct tetra_mac_state *tms, struct msgb *msg, unsigned in
 			strcat(descr,tmpstr);
 
 			uint8_t c;
-
-			if ((protoid==TETRA_SDS_PROTO_TXTMSG)||(protoid==TETRA_SDS_PROTO_SIMPLE_TXTMSG)||(protoid==TETRA_SDS_PROTO_SIMPLE_ITXTMSG)||(protoid==TETRA_SDS_PROTO_ITXTMSG)) {
-				m=1; reserved1=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
-				m=7; coding_scheme=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
-				sprintf(tmpstr," coding_scheme:%2.2x ",coding_scheme);
-				strcat(descr,tmpstr);
-
-				sprintf(tmpstr,"DATA:[");
-				strcat(descr,tmpstr);
-
-				/* dump text message */
-				switch(coding_scheme) {
-					case 0: /* 7-bit gsm encoding */
-						sprintf(tmpstr," *7bit* ");
-						strcat(descr,tmpstr);
-						m=8;
-						l=0;
-						while(datalen>=m) {
-							udata[l]=bits_to_uint(bits+n, m); n=n+m;
-							l++;
-							datalen=datalen-m;
-						}
-						/* TODO: maybe skip the first two bytes? i've never seen a 7-bit SDS in the wild --sq5bpf */
-						datalen=decode_pdu(tmpstr2,udata,l);
-						/* dump */
-						for(a=0;a<datalen;a++) {
-							if (isprint(tmpstr2[a])) {
-								sprintf(tmpstr,"%c",tmpstr2[a]);
-							}
-							else {
-								sprintf(tmpstr,"\\x%2.2X",tmpstr2[a]);
-							}
-							strcat(descr,tmpstr);
-
-
-						}
-						strcat(descr,"]\n");
-
-
-						break;
-					case 0x1A: /* SO/IEC 10646-1 [22] UCS-2/UTF-16BE (16-bit) alphabet */
-						/* TODO: use iconv or whatever else
-						 * for now we'll just use the 8-bit decoding function, 
-						 * every other bit will be written as \x00. ugly but readable --sq5bpf 
-						 */
-
-						sprintf(tmpstr," *UTF16* ");
-						strcat(descr,tmpstr);
-
-					default: /* 8-bit */
-						m=8;
-						l=0;
-						while(datalen>=m) {
-							udata[l]=bits_to_uint(bits+n, m); n=n+m;
-							l++;
-							datalen=datalen-m;
-						}
-						/* TODO: the first two bytes are often garbage. either parse it or skip it 
-						 * i guess i'll have to read the etsi specifications better --sq5bpf */
-
-						for(a=0;a<l;a++) {
-							if (isprint(udata[a])) {
-								sprintf(tmpstr,"%c",udata[a]);
-							}
-							else {
-								sprintf(tmpstr,"\\x%2.2X",udata[a]);
-							}
-							strcat(descr,tmpstr);
-
-
-						}
-						strcat(descr,"]\n");
-						break;
-				}
-			} 
-			else
-			{
-				sprintf(tmpstr,"DATA:[");
-				strcat(descr,tmpstr);
-				/* other message */
-				/* hexdump */
-				m=8;
-				l=0;
-				while(datalen>=m) {
-					udata[l]=bits_to_uint(bits+n, m); n=n+m;
-					l++;
-					datalen=datalen-m;
-				}
-				/* dump */
-				for(a=0;a<l;a++) {
-					sprintf(tmpstr,"0x%2.2X ",udata[a]);
+			switch (protoid) {
+				case TETRA_SDS_PROTO_LOCSYSTEM:
+					sprintf(tmpstr,"LOCATION_SYSTEM:[");
 					strcat(descr,tmpstr);
-				}
-				strcat(descr,"]\n");
-			}
+
+					decode_locsystem(tmpstr2, sizeof(tmpstr2),bits+n,datalen);
+					strcat(descr,tmpstr2);
+					sprintf(tmpstr,"]\n");
+					strcat(descr,tmpstr);
+
+
+					break;
+
+				case TETRA_SDS_PROTO_LIP:
+					sprintf(tmpstr,"LIP:[");
+					strcat(descr,tmpstr);
+
+					decode_lip(tmpstr2, sizeof(tmpstr2),bits+n,datalen);
+					strcat(descr,tmpstr2);
+					sprintf(tmpstr,"]");
+					strcat(descr,tmpstr);
+
+
+					break;
+
+				case TETRA_SDS_PROTO_TXTMSG:
+				case TETRA_SDS_PROTO_SIMPLE_TXTMSG:
+				case TETRA_SDS_PROTO_SIMPLE_ITXTMSG:
+				case TETRA_SDS_PROTO_ITXTMSG:
+					m=1; reserved1=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
+					m=7; coding_scheme=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
+					sprintf(tmpstr," coding_scheme:%2.2x ",coding_scheme);
+					strcat(descr,tmpstr);
+
+					sprintf(tmpstr,"DATA:[");
+					strcat(descr,tmpstr);
+
+					/* dump text message */
+					switch(coding_scheme) {
+						case 0: /* 7-bit gsm encoding */
+							sprintf(tmpstr," *7bit* ");
+							strcat(descr,tmpstr);
+							m=8;
+							l=0;
+							while(datalen>=m) {
+								udata[l]=bits_to_uint(bits+n, m); n=n+m;
+								l++;
+								datalen=datalen-m;
+							}
+							/* TODO: maybe skip the first two bytes? i've never seen a 7-bit SDS in the wild --sq5bpf */
+							datalen=decode_pdu(tmpstr2,udata,l);
+							/* dump */
+							for(a=0;a<datalen;a++) {
+								if (isprint(tmpstr2[a])) {
+									sprintf(tmpstr,"%c",tmpstr2[a]);
+								}
+								else {
+									sprintf(tmpstr,"\\x%2.2X",tmpstr2[a]);
+								}
+								strcat(descr,tmpstr);
+
+
+							}
+							strcat(descr,"]");
+
+
+							break;
+						case 0x1A: /* SO/IEC 10646-1 [22] UCS-2/UTF-16BE (16-bit) alphabet */
+							/* TODO: use iconv or whatever else
+							 * for now we'll just use the 8-bit decoding function, 
+							 * every other bit will be written as \x00. ugly but readable --sq5bpf 
+							 */
+
+							sprintf(tmpstr," *UTF16* ");
+							strcat(descr,tmpstr);
+
+						default: /* 8-bit */
+							m=8;
+							l=0;
+							while(datalen>=m) {
+								udata[l]=bits_to_uint(bits+n, m); n=n+m;
+								l++;
+								datalen=datalen-m;
+							}
+							/* TODO: the first two bytes are often garbage. either parse it or skip it 
+							 * i guess i'll have to read the etsi specifications better --sq5bpf */
+
+							for(a=0;a<l;a++) {
+								if (isprint(udata[a])) {
+									sprintf(tmpstr,"%c",udata[a]);
+								}
+								else {
+									sprintf(tmpstr,"\\x%2.2X",udata[a]);
+								}
+								strcat(descr,tmpstr);
+
+
+							}
+							strcat(descr,"]");
+							break;
+					}
+					break;
+
+				default:	
+					sprintf(tmpstr,"DATA:[");
+					strcat(descr,tmpstr);
+					/* other message */
+					/* hexdump */
+					m=8;
+					l=0;
+					while(datalen>=m) {
+						udata[l]=bits_to_uint(bits+n, m); n=n+m;
+						l++;
+						datalen=datalen-m;
+					}
+					/* dump */
+					for(a=0;a<l;a++) {
+						sprintf(tmpstr,"0x%2.2X ",udata[a]);
+						strcat(descr,tmpstr);
+					}
+					strcat(descr,"]");
+					break;
+
+			}	
 
 
 	}
