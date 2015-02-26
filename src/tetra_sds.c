@@ -1,5 +1,27 @@
+/* tetra_sds.c - SDS helper functions 
+ * 
+ *
+ * (C) 2014-2015 by Jacek Lipkowski <sq5bpf@lipkowski.org>
+ * All Rights Reserved
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+
+
 #include <stdint.h>
-/* Tetra SDS functions --sq5bpf */
 #include "tetra_sds.h"
 
 #include <stdint.h>
@@ -145,32 +167,102 @@ int decode_locsystem(char *out, int outlen,uint8_t *bits,int datalen)
 	int dump=1; /* should we dump, or maybe do something smarter? */
 	buf[0]=0;
 	datalen=datalen-16; n=n+16; /* skip the sds-tl 2-byte header */
-	m=8; locsystem_coding_scheme=bits_to_uint(bits+n, m); n=n+m;
+	m=8; locsystem_coding_scheme=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
 	switch (locsystem_coding_scheme) {
 		case 0: /* NMEA */
-			snprintf(out,outlen,"NMEA:"); outlen=outlen-6;
+			snprintf(out,outlen,"NMEA: "); outlen=outlen-7;
 			dumpascii=1;
 			break;
 		case 1: /* RTCM DC-104 */
 			snprintf(out,outlen,"RTCM SC-104 (not implemented)"); outlen=outlen-30;
 			break;
 		default: /* reserved */
-			snprintf(out,outlen,"proprietary coding scheme %i",locsystem_coding_scheme); outlen=outlen-30;
+			snprintf(out,outlen,"proprietary coding scheme 0x2.2x: ",locsystem_coding_scheme); outlen=outlen-33;
 
 			break;
 	}
 	if (dump)
-	{	while ((datalen>0)&&(outlen>0)) {
+	{       while ((datalen>0)&&(outlen>0)) {
 							m=8; c=bits_to_uint(bits+n, m); n=n+m;
-							if (dumpascii&&isprint(c)) {
+							if ((dumpascii)&&isprint(c)) {
 								sprintf(buf,"%c",c);
 								outlen--;
 							} else {
-								sprintf(buf,"\\x%2.2x",c);
+								sprintf(buf,"\\x%2.2x",(unsigned char) c);
 								outlen=outlen-3;
 							}
+							datalen=datalen-m;
 							strcat(out,buf);
 						}
 	}
+
 	return(0);
 }
+
+/* decode Simple Location System */
+int decode_simplelocsystem(char *out, int outlen,uint8_t *bits,int datalen)
+{
+	/* TODO: this should be one common function for decode_simplelocsystem and decode_locsystem,
+	 * because in theory they are the same */
+	int n=0, m;
+	uint8_t locsystem_coding_scheme;
+	int dumpascii=0; /* try to dump ascii, or just do all hex? */
+	int dump=1; /* should we dump, or maybe do something smarter? */
+	uint32_t loc_longtitude; 
+	uint32_t loc_lattitude; 
+	float lattitude,longtitude;
+	char c;
+	char latdir,londir;
+
+	char buf[1024];
+	m=8; locsystem_coding_scheme=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
+	switch (locsystem_coding_scheme) {
+		case 0: /* NMEA */
+			snprintf(out,outlen,"NMEA: "); outlen=outlen-7;
+			dumpascii=1;
+			break;
+		case 1: /* RTCM DC-104 */
+			snprintf(out,outlen,"RTCM SC-104 (not implemented)"); outlen=outlen-30;
+			break;
+
+		case 0x80: /* some proprietary system seen in the wild in Spain */
+			loc_lattitude=bits_to_uint(bits+20, 24);
+			loc_longtitude=bits_to_uint(bits+44, 24);
+			/* i didn't figure out yet what the other bits mean yet */
+			if (loc_lattitude&(1<<23)) {
+				lattitude=(((1<<24)-loc_lattitude)*180.0)/(1.0*(1<<24)); latdir='S';
+			} else
+			{
+				lattitude=(loc_lattitude*180.0)/(1.0*(1<<24)); latdir='N';
+			}
+
+			if (loc_longtitude&(1<<23)) {
+				longtitude=(((1<<24)-loc_longtitude)*360.0)/(1.0*(1<<24)); londir='W';
+			} else
+			{
+				longtitude=(loc_longtitude*360.0)/(1.0*(1<<24)); londir='E';
+			}
+			snprintf(out,outlen,"PROPRIETARY_0x80 lat:%.6f%c lon:%.6f%c",lattitude,latdir,longtitude,londir);
+			dump=0;
+			break;
+		default:
+			snprintf(out,outlen,"proprietary coding scheme 0x%2.2x: ",locsystem_coding_scheme); outlen=outlen-33;
+
+	}
+	if (dump)
+	{       while ((datalen>0)&&(outlen>0)) {
+							m=8; c=bits_to_uint(bits+n, m); n=n+m;
+							if ((dumpascii)&&isprint(c)) {
+								sprintf(buf,"%c",c);
+								outlen--;
+							} else {
+								sprintf(buf,"\\x%2.2x",(unsigned char) c);
+								outlen=outlen-3;
+							}
+							datalen=datalen-m;
+							strcat(out,buf);
+						}
+	}
+
+}
+
