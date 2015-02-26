@@ -18,6 +18,8 @@ crc_test: crc_test.o tetra_common.o libosmo-tetra-mac.a
 
 tetra-rx: tetra-rx.o libosmo-tetra-phy.a libosmo-tetra-mac.a
 
+testsds: testsds.o libosmo-tetra-phy.a libosmo-tetra-mac.a
+
 conv_enc_test: conv_enc_test.o testpdu.o libosmo-tetra-phy.a libosmo-tetra-mac.a
 
 tunctl: tunctl.o
