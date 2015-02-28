@@ -145,8 +145,8 @@ int decode_lip(char *out, int outlen,uint8_t *bits,int datalen)
 
 		case 1: /* LONG-type pdus */
 			m=4; lip_pdu_type_extension=bits_to_uint(bits+n, m); n=n+m;
-
 			snprintf(out,outlen,"LONG PDU TYPE ext %i (not implemented yet)",lip_pdu_type_extension);
+			break;
 		default:
 
 			snprintf(out,outlen,"UNKNOWN PDU TYPE %i",lip_pdu_type);
