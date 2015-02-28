@@ -20,5 +20,5 @@ a8115fe68ef8f8cc466f4192572a1e3e
 
 
 For compiling please use only the codec.diff patch (which has all of the other patches
-included + various other fixes), and compile in a 32-bit environment (64-bit segfaults).
+included + various other fixes), and compile in a 32 or 64-bit environment.
 

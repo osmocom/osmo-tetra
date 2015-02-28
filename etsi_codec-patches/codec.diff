@@ -1,16 +1,13 @@
-Includes of the patches from osmocom-tetra, and also patches to log to stderr and 
-compile the codecs static.
-
-Please note that this needs to be compiled with a 32-bit gcc. Easiest way is
-to either install a 32-bit compiler and compat libraries, or a 32-bit 
-build environment in chroot (this is what i did, and this is one of the reasons 
-for the static build). --sq5bpf
+Includes of the patches from osmocom-tetra, and also patches to log to stderr,
+enables compiler optimizations and allows building in a 64-bit gcc.
+				--sq5bpf
+				--Antonio Eugenio Burriel <aeburriel@gmail.com>
 
 
 
-diff -ur codec.orig/amr-code/channel.h codec.patched/amr-code/channel.h
---- codec.orig/amr-code/channel.h	2003-01-09 13:33:48.000000000 +0100
-+++ codec.patched/amr-code/channel.h	2014-11-18 22:53:06.000000000 +0100
+diff -ur orig/amr-code/channel.h new/amr-code/channel.h
+--- orig/amr-code/channel.h	2003-01-09 13:33:48.000000000 +0100
++++ new/amr-code/channel.h	2015-02-28 23:09:40.431796317 +0100
 @@ -139,7 +139,7 @@
  Word16 negate(Word16 var1);               /* Short negate,        1 */
  Word16 norm_l(Word32 L_var1);             /* Long norm,          30 */
@@ -20,9 +17,9 @@ diff -ur codec.orig/amr-code/channel.h codec.patched/amr-code/channel.h
  Word16 shl(Word16 var1, Word16 var2);     /* Short shift left,    1 */
  Word16 shr(Word16 var1, Word16 var2);     /* Short shift right,   1 */
  Word16 sub(Word16 var1, Word16 var2);     /* Short sub,           1 */
-diff -ur codec.orig/amr-code/init_params.c codec.patched/amr-code/init_params.c
---- codec.orig/amr-code/init_params.c	2003-01-09 13:30:52.000000000 +0100
-+++ codec.patched/amr-code/init_params.c	2014-11-18 22:53:06.000000000 +0100
+diff -ur orig/amr-code/init_params.c new/amr-code/init_params.c
+--- orig/amr-code/init_params.c	2003-01-09 13:30:52.000000000 +0100
++++ new/amr-code/init_params.c	2015-02-28 23:09:40.435796388 +0100
 @@ -26,11 +26,11 @@
  #include "const.tab" /* contains constants for channel coding/decoding */
  #include "arrays.h" /* contains constants for channel coding/decoding */
@@ -39,37 +36,50 @@ diff -ur codec.orig/amr-code/init_params.c codec.patched/amr-code/init_params.c
  
  #define ALLOW_NEG(x) (((x) < 0) ? (((-x)%2 == 1) ?  (-x)/2 - N1_2 + 1 :  (x)/2 + 1) : (x))
  
-diff -ur codec.orig/amr-code/makefile codec.patched/amr-code/makefile
---- codec.orig/amr-code/makefile	2003-01-09 13:29:36.000000000 +0100
-+++ codec.patched/amr-code/makefile	2014-11-18 22:53:06.000000000 +0100
+diff -ur orig/amr-code/makefile new/amr-code/makefile
+--- orig/amr-code/makefile	2003-01-09 13:29:36.000000000 +0100
++++ new/amr-code/makefile	2015-02-28 23:16:31.371084599 +0100
 @@ -21,7 +21,7 @@
  
  CC=gcc
  
 -CFLAGS	=	-g -I.
-+CFLAGS	=	-g -I. -Wall -m32
++CFLAGS	=	-g -I. -Wall -O3
  
  SRCS1		=	ccoder.c	ccod_tet.c	init_params.c	sub_cc.c \
  			tetra_op.c
-@@ -33,11 +33,11 @@
+@@ -33,10 +33,10 @@
  
  all:		ccoder	cdecoder
  
 -ccoder:
--	$(CC) $(SRCS1) $(CFLAGS) -o ccoder
 +ccoder: $(SRCS1)
-+	$(CC) $(SRCS1) $(CFLAGS) -o ccoder -static
+ 	$(CC) $(SRCS1) $(CFLAGS) -o ccoder
  
 -cdecoder:
--	$(CC) $(SRCS2) $(CFLAGS) -o cdecoder
 +cdecoder: $(SRCS2)
-+	$(CC) $(SRCS2) $(CFLAGS) -o cdecoder -static
+ 	$(CC) $(SRCS2) $(CFLAGS) -o cdecoder
  
  clean:
- 	rm -f ccoder cdecoder core *.o
-diff -ur codec.orig/amr-code/source.h codec.patched/amr-code/source.h
---- codec.orig/amr-code/source.h	2002-11-18 15:54:26.000000000 +0100
-+++ codec.patched/amr-code/source.h	2014-11-18 22:53:06.000000000 +0100
+diff -ur orig/amr-code/source.h new/amr-code/source.h
+--- orig/amr-code/source.h	2002-11-18 15:54:26.000000000 +0100
++++ new/amr-code/source.h	2015-02-28 23:27:09.550436888 +0100
+@@ -19,11 +19,11 @@
+ 
+ #ifndef TYPEDEF_H
+ #define TYPEDEF_H
++#include <stdint.h>
+ 
+-
+-typedef short Word16;
+-typedef long  Word32;
+-typedef int   Flag;
++typedef int16_t Word16;
++typedef int32_t Word32;
++typedef int     Flag;
+ 
+ #endif
+ 
 @@ -164,7 +164,7 @@
  Word16 negate(Word16 var1);               /* Short negate,        1 */
  Word16 norm_l(Word32 L_var1);             /* Long norm,          30 */
@@ -79,9 +89,9 @@ diff -ur codec.orig/amr-code/source.h codec.patched/amr-code/source.h
  Word16 shl(Word16 var1, Word16 var2);     /* Short shift left,    1 */
  Word16 shr(Word16 var1, Word16 var2);     /* Short shift right,   1 */
  Word16 sub(Word16 var1, Word16 var2);     /* Short sub,           1 */
-diff -ur codec.orig/amr-code/tetra_op.c codec.patched/amr-code/tetra_op.c
---- codec.orig/amr-code/tetra_op.c	2003-01-09 13:36:22.000000000 +0100
-+++ codec.patched/amr-code/tetra_op.c	2014-11-18 22:53:06.000000000 +0100
+diff -ur orig/amr-code/tetra_op.c new/amr-code/tetra_op.c
+--- orig/amr-code/tetra_op.c	2003-01-09 13:36:22.000000000 +0100
++++ new/amr-code/tetra_op.c	2015-02-28 23:09:40.435796388 +0100
 @@ -31,7 +31,7 @@
  *					- negate()
  *					- norm_l()
@@ -117,9 +127,9 @@ diff -ur codec.orig/amr-code/tetra_op.c codec.patched/amr-code/tetra_op.c
    {
     Word16 var_out;
     Word32 L_arrondi;
-diff -ur codec.orig/c-code/cdecoder.c codec.patched/c-code/cdecoder.c
---- codec.orig/c-code/cdecoder.c	1995-06-06 11:32:14.000000000 +0200
-+++ codec.patched/c-code/cdecoder.c	2014-11-18 22:53:06.000000000 +0100
+diff -ur orig/c-code/cdecoder.c new/c-code/cdecoder.c
+--- orig/c-code/cdecoder.c	1995-06-06 11:32:14.000000000 +0200
++++ new/c-code/cdecoder.c	2015-02-28 23:09:40.435796388 +0100
 @@ -67,23 +67,23 @@
  	/* Parse arguments */
  	if ( argc != 3 )
@@ -212,9 +222,9 @@ diff -ur codec.orig/c-code/cdecoder.c codec.patched/c-code/cdecoder.c
  	
  	/* closing files */
  	fclose( fin );
-diff -ur codec.orig/c-code/channel.h codec.patched/c-code/channel.h
---- codec.orig/c-code/channel.h	1995-06-09 16:14:42.000000000 +0200
-+++ codec.patched/c-code/channel.h	2014-11-18 22:53:06.000000000 +0100
+diff -ur orig/c-code/channel.h new/c-code/channel.h
+--- orig/c-code/channel.h	1995-06-09 16:14:42.000000000 +0200
++++ new/c-code/channel.h	2015-02-28 23:09:40.435796388 +0100
 @@ -130,7 +130,7 @@
  Word16 negate(Word16 var1);               /* Short negate,        1 */
  Word16 norm_l(Word32 L_var1);             /* Long norm,          30 */
@@ -224,9 +234,9 @@ diff -ur codec.orig/c-code/channel.h codec.patched/c-code/channel.h
  Word16 shl(Word16 var1, Word16 var2);     /* Short shift left,    1 */
  Word16 shr(Word16 var1, Word16 var2);     /* Short shift right,   1 */
  Word16 sub(Word16 var1, Word16 var2);     /* Short sub,           1 */
-diff -ur codec.orig/c-code/makefile codec.patched/c-code/makefile
---- codec.orig/c-code/makefile	1995-06-06 11:35:40.000000000 +0200
-+++ codec.patched/c-code/makefile	2014-11-18 22:53:06.000000000 +0100
+diff -ur orig/c-code/makefile new/c-code/makefile
+--- orig/c-code/makefile	1995-06-06 11:35:40.000000000 +0200
++++ new/c-code/makefile	2015-02-28 23:12:08.158414239 +0100
 @@ -21,9 +21,9 @@
  
  # macro definitions
@@ -235,7 +245,7 @@ diff -ur codec.orig/c-code/makefile codec.patched/c-code/makefile
 +CC=gcc
  
 -CFLAGS	=	-I.
-+CFLAGS	=	-I. -Wall -g -m32
++CFLAGS	=	-I. -Wall -g -O3
  
  SRCS1		=	scoder.c		scod_tet.c		sub_sc_d.c \
  			sub_dsp.c		fbas_tet.c		fexp_tet.c \
@@ -244,32 +254,29 @@ diff -ur codec.orig/c-code/makefile codec.patched/c-code/makefile
  all:		scoder	ccoder	sdecoder	cdecoder
  
 -scoder:
--	$(CC) $(SRCS1) $(CFLAGS) -o scoder
 +scoder: $(SRCS1)
-+	$(CC) $(SRCS1) $(CFLAGS) -o scoder -static
+ 	$(CC) $(SRCS1) $(CFLAGS) -o scoder
  
 -ccoder:
--	$(CC) $(SRCS2) $(CFLAGS) -o ccoder
 +ccoder: $(SRCS2)
-+	$(CC) $(SRCS2) $(CFLAGS) -o ccoder -static
+ 	$(CC) $(SRCS2) $(CFLAGS) -o ccoder
  
 -sdecoder:
--	$(CC) $(SRCS3) $(CFLAGS) -o sdecoder
 +sdecoder: $(SRCS3)
-+	$(CC) $(SRCS3) $(CFLAGS) -o sdecoder -static
+ 	$(CC) $(SRCS3) $(CFLAGS) -o sdecoder
  
 -cdecoder:
--	$(CC) $(SRCS4) $(CFLAGS) -o cdecoder
 +cdecoder: $(SRCS4)
-+	$(CC) $(SRCS4) $(CFLAGS) -o cdecoder -static
+ 	$(CC) $(SRCS4) $(CFLAGS) -o cdecoder
  
  clean:
 -	rm -f core *.o
 +	rm -f core *.o cdecoder sdecoder ccoder scoder
  
-diff -ur codec.orig/c-code/sdecoder.c codec.patched/c-code/sdecoder.c
---- codec.orig/c-code/sdecoder.c	1995-06-06 10:55:28.000000000 +0200
-+++ codec.patched/c-code/sdecoder.c	2014-11-18 22:53:06.000000000 +0100
+Sólo en new/c-code: makefile.orig
+diff -ur orig/c-code/sdecoder.c new/c-code/sdecoder.c
+--- orig/c-code/sdecoder.c	1995-06-06 10:55:28.000000000 +0200
++++ new/c-code/sdecoder.c	2015-02-28 23:09:40.435796388 +0100
 @@ -58,15 +58,15 @@
  
    if ( argc != 3 )
@@ -320,9 +327,25 @@ diff -ur codec.orig/c-code/sdecoder.c codec.patched/c-code/sdecoder.c
  
      Bits2prm_Tetra(serial, parm);	/* serial to parameters */
  
-diff -ur codec.orig/c-code/source.h codec.patched/c-code/source.h
---- codec.orig/c-code/source.h	1995-06-06 11:10:52.000000000 +0200
-+++ codec.patched/c-code/source.h	2014-11-18 22:53:06.000000000 +0100
+diff -ur orig/c-code/source.h new/c-code/source.h
+--- orig/c-code/source.h	1995-06-06 11:10:52.000000000 +0200
++++ new/c-code/source.h	2015-02-28 23:27:09.550436888 +0100
+@@ -19,11 +19,11 @@
+ 
+ #ifndef TYPEDEF_H
+ #define TYPEDEF_H
++#include <stdint.h>
+ 
+-
+-typedef short Word16;
+-typedef long  Word32;
+-typedef int   Flag;
++typedef int16_t Word16;
++typedef int32_t Word32;
++typedef int     Flag;
+ 
+ #endif
+ 
 @@ -164,7 +164,7 @@
  Word16 negate(Word16 var1);               /* Short negate,        1 */
  Word16 norm_l(Word32 L_var1);             /* Long norm,          30 */
@@ -332,9 +355,9 @@ diff -ur codec.orig/c-code/source.h codec.patched/c-code/source.h
  Word16 shl(Word16 var1, Word16 var2);     /* Short shift left,    1 */
  Word16 shr(Word16 var1, Word16 var2);     /* Short shift right,   1 */
  Word16 sub(Word16 var1, Word16 var2);     /* Short sub,           1 */
-diff -ur codec.orig/c-code/sub_dsp.c codec.patched/c-code/sub_dsp.c
---- codec.orig/c-code/sub_dsp.c	1996-03-19 11:25:12.000000000 +0100
-+++ codec.patched/c-code/sub_dsp.c	2014-11-18 22:53:06.000000000 +0100
+diff -ur orig/c-code/sub_dsp.c new/c-code/sub_dsp.c
+--- orig/c-code/sub_dsp.c	1996-03-19 11:25:12.000000000 +0100
++++ new/c-code/sub_dsp.c	2015-02-28 23:09:40.439796459 +0100
 @@ -554,7 +554,7 @@
  
    fac[0] = gamma;
@@ -353,9 +376,9 @@ diff -ur codec.orig/c-code/sub_dsp.c codec.patched/c-code/sub_dsp.c
  
    return;
  }
-diff -ur codec.orig/c-code/sub_sc_d.c codec.patched/c-code/sub_sc_d.c
---- codec.orig/c-code/sub_sc_d.c	1996-04-25 08:46:54.000000000 +0200
-+++ codec.patched/c-code/sub_sc_d.c	2014-11-18 22:53:06.000000000 +0100
+diff -ur orig/c-code/sub_sc_d.c new/c-code/sub_sc_d.c
+--- orig/c-code/sub_sc_d.c	1996-04-25 08:46:54.000000000 +0200
++++ new/c-code/sub_sc_d.c	2015-02-28 23:09:40.439796459 +0100
 @@ -1829,7 +1829,7 @@
      s = L_mac0(s, x[i-15], coef[i]);
  
@@ -374,9 +397,9 @@ diff -ur codec.orig/c-code/sub_sc_d.c codec.patched/c-code/sub_sc_d.c
    return(i);
  }
  
-diff -ur codec.orig/c-code/tetra_op.c codec.patched/c-code/tetra_op.c
---- codec.orig/c-code/tetra_op.c	1995-06-06 11:22:52.000000000 +0200
-+++ codec.patched/c-code/tetra_op.c	2014-11-18 22:53:06.000000000 +0100
+diff -ur orig/c-code/tetra_op.c new/c-code/tetra_op.c
+--- orig/c-code/tetra_op.c	1995-06-06 11:22:52.000000000 +0200
++++ new/c-code/tetra_op.c	2015-02-28 23:09:40.439796459 +0100
 @@ -31,7 +31,7 @@
  *					- negate()
  *					- norm_l()

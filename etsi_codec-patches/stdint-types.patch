@@ -1,0 +1,38 @@
+diff -uar orig/amr-code/source.h new/amr-code/source.h
+--- amr-code.orig/source.h	2015-02-27 22:19:32.152688316 +0100
++++ amr-code/source.h	2015-02-28 23:00:26.722006579 +0100
+@@ -19,11 +19,11 @@
+ 
+ #ifndef TYPEDEF_H
+ #define TYPEDEF_H
++#include <stdint.h>
+ 
+-
+-typedef short Word16;
+-typedef long  Word32;
+-typedef int   Flag;
++typedef int16_t Word16;
++typedef int32_t Word32;
++typedef int     Flag;
+ 
+ #endif
+ 
+diff -uar orig/c-code/source.h new/c-code/source.h
+--- c-code.orig/source.h	2015-02-27 22:19:32.000000000 +0100
++++ c-code/source.h	2015-02-28 23:00:21.941922233 +0100
+@@ -19,11 +19,11 @@
+ 
+ #ifndef TYPEDEF_H
+ #define TYPEDEF_H
++#include <stdint.h>
+ 
+-
+-typedef short Word16;
+-typedef long  Word32;
+-typedef int   Flag;
++typedef int16_t Word16;
++typedef int32_t Word32;
++typedef int     Flag;
+ 
+ #endif
+ 
