@@ -134,6 +134,70 @@ static const struct lip_dirtravel_type lip_dirtravel_types[]=
 };
 
 static const char* const  lip_position_errors[]={ "<2m", "<20m", "<200m", "<2km", "<20km", "=<200km", ">200km", "unknown" };
+
+
+enum tetra_lip_longpduexttypes {
+	TETRA_LIP_LONGPDUEXT_IMMLOCREPREQ = 1,
+	TETRA_LIP_LONGPDUEXT_LONGLOCREP = 3,
+	TETRA_LIP_LONGPDUEXT_LOCREPACK = 4,
+	TETRA_LIP_LONGPDUEXT_BASICLOCREPREQ = 5,
+	TETRA_LIP_LONGPDUEXT_MODTRIGGER = 6,
+	TETRA_LIP_LONGPDUEXT_REMTRIGGER = 7,
+	TETRA_LIP_LONGPDUEXT_REPTRIGGER = 8,
+	TETRA_LIP_LONGPDUEXT_REPBASICLOC = 9,
+	TETRA_LIP_LONGPDUEXT_LOCREPORENABLE = 10,
+	TETRA_LIP_LONGPDUEXT_LOCREPORTTMPCONTROL = 11,
+	TETRA_LIP_LONGPDUEXT_BACKLOGREQRESP = 12
+};
+static const char* const  lip_longpdu_extensions[]={ 
+	"Reserved_0", /* 0 */
+	"Immediate location report request", /* 1 */
+	"Reserved_2", /* 2 */
+	"Long location report", /* 3 */
+	"Location report acknowledgement", /* 4 */
+	"Basic location parameters request/response", /* 5 */
+	"Add/modify trigger request/response", /* 6 */
+	"Remove trigger request/response", /* 7 */
+	"Report trigger request/response", /* 8 */
+	"Report basic location parameters request/response", /* 9 */
+	"Location reporting enable/disable request/response", /* 10 */
+	"Location reporting temporary control request/response", /* 11 */
+	"Backlog request/response", /* 12 */
+	"Reserved_13", /* 13 */
+	"Reserved_14", /* 14 */
+	"Reserved_15" /* 15 */ }; 
+
+/* Table 6.79: Location shape information element contents */
+enum tetra_lip_locshapetypes {
+	TETRA_LIP_SHAPE_NOSHAPE = 0,
+	TETRA_LIP_SHAPE_POINT = 1,
+	TETRA_LIP_SHAPE_CIRCLE = 2,
+	TETRA_LIP_SHAPE_ELLIPSE = 3,
+	TETRA_LIP_SHAPE_POINT_ALTITUDE = 4,
+	TETRA_LIP_SHAPE_CIRCLE_ALTITUDE = 5,
+	TETRA_LIP_SHAPE_ELLIPSE_ALTITUDE = 6,
+	TETRA_LIP_SHAPE_CIRCLE_ALTITUDE_ALTUNC = 7,
+	TETRA_LIP_SHAPE_ARC = 9,
+	TETRA_LIP_SHAPE_POINT_POSERR = 10,
+	TETRA_LIP_SHAPE_RESERVED11 = 11,
+	TETRA_LIP_SHAPE_RESERVED12 = 12,
+	TETRA_LIP_SHAPE_RESERVED13 = 13,
+	TETRA_LIP_SHAPE_RESERVED15 = 14,
+	TETRA_LIP_SHAPE_LOCSHAPE_EXTENSION = 15
+};
+
+/* Table 6.124: Velocity type information element contents */
+enum tetra_lip_velocitytypes {
+	TETRA_LIP_VELOCITY_NONE = 0,
+	TETRA_LIP_VELOCITY_HORIZ_VELOCITY = 1,
+	TETRA_LIP_VELOCITY_HORIZ_VELOCITY_UNC = 2,
+	TETRA_LIP_VELOCITY_HORIZ_VELOCITY_VERT = 3,
+	TETRA_LIP_VELOCITY_HORIZ_VELOCITY_VERT_UNC = 4,
+	TETRA_LIP_VELOCITY_HORIZ_VELOCITY_DIRTRAVEL = 5,
+	TETRA_LIP_VELOCITY_HORIZ_VELOCITY_DIRTRAVEL_UNC = 6,
+	TETRA_LIP_VELOCITY_HORIZ_VELOCITY_VERT_DIRTRAVEL_UNC = 7
+
+};
 int decode_lip(char *out, int outlen,uint8_t *bits,int datalen);
 
 /**************   Location System   **************/
