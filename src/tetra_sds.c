@@ -540,6 +540,7 @@ int decode_simplelocsystem(char *out, int outlen,uint8_t *bits,int datalen)
 	char latdir,londir;
 	uint16_t unk_flags;
 	char buf[1024];
+	int is_invalid=0;
 	m=8; locsystem_coding_scheme=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
 	switch (locsystem_coding_scheme) {
 		case 0: /* NMEA */
@@ -568,7 +569,9 @@ int decode_simplelocsystem(char *out, int outlen,uint8_t *bits,int datalen)
 			{
 				longtitude=(loc_longtitude*360.0)/(1.0*(1<<24)); londir='E';
 			}
-			snprintf(out,outlen,"PROPRIETARY_0x80 unknown_flags:0x%4.4x lat:%.6f%c lon:%.6f%c",unk_flags,lattitude,latdir,longtitude,londir);
+			if ((lattitude==90)&&(longtitude==0)) is_invalid=1;
+			if ((lattitude==0)&&(longtitude==0)) is_invalid=1;
+			snprintf(out,outlen,"PROPRIETARY_0x80 %sunknown_flags:0x%4.4x lat:%.6f%c lon:%.6f%c",is_invalid?"INVALID_POSITION ":"",unk_flags,lattitude,latdir,longtitude,londir);
 			dump=0;
 			break;
 		default:
