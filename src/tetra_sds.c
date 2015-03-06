@@ -350,7 +350,7 @@ int decode_lip(char *out, int outlen,uint8_t *bits,int datalen)
 						case TETRA_LIP_SHAPE_RESERVED15:
 						case TETRA_LIP_SHAPE_LOCSHAPE_EXTENSION:
 						default:
-							sprintf(tmpstr2,"Location Data [%i]");
+							sprintf(tmpstr2,"Location Data [%i]",lip_pdu_locdata);
 							break;
 					}
 					strcat(tmpstr,tmpstr2);
