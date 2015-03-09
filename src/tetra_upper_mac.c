@@ -109,6 +109,7 @@ int parse_d_release(struct tetra_mac_state *tms, struct msgb *msg, unsigned int 
 	uint8_t *bits = msg->l3h+3;
 	int n=0;
 	int m=0;
+	char tmpstr2[1024];
 
 	/* strona 270 */
 	m=5; uint8_t pdu_type=bits_to_uint(bits+n, m); n=n+m;
@@ -116,6 +117,8 @@ int parse_d_release(struct tetra_mac_state *tms, struct msgb *msg, unsigned int 
 	m=4; uint16_t disccause=bits_to_uint(bits+n, m); n=n+m;
 	m=6; uint16_t notifindic=bits_to_uint(bits+n, m); n=n+m;
 	printf("\nCall identifier:%i Discconnect cause:%i NotificationID:%i\n",callident,disccause,notifindic);
+	sprintf(tmpstr2,"TETMON_begin FUNC:DRELEASEDEC CID:%i NID:%i RX:%i TETMON_end",callident, notifindic,tetra_hack_rxid);
+	sendto(tetra_hack_live_socket, (char *)&tmpstr2, strlen((char *)&tmpstr2)+1, 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
 
 }
 
@@ -170,7 +173,7 @@ uint parse_d_setup(struct tetra_mac_state *tms, struct msgb *msg, unsigned int l
 	printf("Basicinfo:0x%2.2X  Txgrant:%i  TXperm:%i  Callprio:%i\n",basicinfo,txgrant,txperm,callprio);
 	printf("NotificationID:%i  Tempaddr:%i CPTI:%i  CallingSSI:%i  CallingExt:%i\n",notifindic,tempaddr,cpti,callingssi,callingext);
 
-	sprintf(tmpstr2,"TETMON_begin FUNC:DSETUPDEC IDX:%i SSI:%i RX:%i TETMON_end",rsd.addr.usage_marker,tempaddr,tetra_hack_rxid);
+	sprintf(tmpstr2,"TETMON_begin FUNC:DSETUPDEC IDX:%i SSI:%i CID:%i NID:%i RX:%i TETMON_end",rsd.addr.usage_marker,tempaddr,callident,notifindic,tetra_hack_rxid);
 	sendto(tetra_hack_live_socket, (char *)&tmpstr2, strlen((char *)&tmpstr2)+1, 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
 
 }
