@@ -110,14 +110,20 @@ int parse_d_release(struct tetra_mac_state *tms, struct msgb *msg, unsigned int 
 	int n=0;
 	int m=0;
 	char tmpstr2[1024];
+	char *nis;
+	int tmpdu_offset;
+	struct tetra_resrc_decoded rsd;
 
+	memset(&rsd, 0, sizeof(rsd));
+	tmpdu_offset = macpdu_decode_resource(&rsd, msg->l1h);
 	/* strona 270 */
 	m=5; uint8_t pdu_type=bits_to_uint(bits+n, m); n=n+m;
 	m=14; uint16_t callident=bits_to_uint(bits+n, m); n=n+m;
-	m=4; uint16_t disccause=bits_to_uint(bits+n, m); n=n+m;
+	m=5; uint16_t disccause=bits_to_uint(bits+n, m); n=n+m;
 	m=6; uint16_t notifindic=bits_to_uint(bits+n, m); n=n+m;
-	printf("\nCall identifier:%i Discconnect cause:%i NotificationID:%i\n",callident,disccause,notifindic);
-	sprintf(tmpstr2,"TETMON_begin FUNC:DRELEASEDEC CID:%i NID:%i RX:%i TETMON_end",callident, notifindic,tetra_hack_rxid);
+	nis=(notifindic<28)?notification_indicator_strings[notifindic]:"Reserved";
+	printf("\nCall identifier:%i Discconnect cause:%i NotificationID:%i (%s)\n",callident,disccause,notifindic,nis);
+	sprintf(tmpstr2,"TETMON_begin FUNC:DRELEASEDEC SSI:%i CID:%i NID:%i [%s] RX:%i TETMON_end",rsd.addr.ssi,callident, notifindic,nis,tetra_hack_rxid);
 	sendto(tetra_hack_live_socket, (char *)&tmpstr2, strlen((char *)&tmpstr2)+1, 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
 
 }
@@ -178,6 +184,7 @@ uint parse_d_setup(struct tetra_mac_state *tms, struct msgb *msg, unsigned int l
 
 }
 
+/* TODO: move this into tetra_sds.c and break into multiple functions */
 uint parse_d_sds_data(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len)
 {
 	/* strona  269, 297, 1072, 1075 */
@@ -197,12 +204,26 @@ uint parse_d_sds_data(struct tetra_mac_state *tms, struct msgb *msg, unsigned in
 	uint8_t protoid;
 	uint8_t reserved1;
 	uint8_t coding_scheme;
-	char descr[1024];
+	char descr[4096];
 	char tmpstr[128];
 	char tmpstr2[1024];
-
+	int is_sdstl=0;
+	uint8_t  message_type;
 	struct tetra_resrc_decoded rsd;
 	int tmpdu_offset;
+	uint8_t sdstl_delivery_report_request;
+	uint8_t sdstl_service_selection;
+	uint8_t sdstl_storage_control;
+	uint8_t sdstl_message_reference;
+	uint8_t sdstl_validity_period;
+	uint8_t sdstl_forw_address_type;
+	uint32_t sdstl_forw_address;
+	uint32_t sdstl_forw_address_ext;
+	uint8_t sdstl_extnum_digits;
+	uint8_t sdstl_extnum_digit;
+	int decode_sds=1;
+
+
 	memset(&rsd, 0, sizeof(rsd));
 	tmpdu_offset = macpdu_decode_resource(&rsd, msg->l1h);
 
@@ -211,18 +232,22 @@ uint parse_d_sds_data(struct tetra_mac_state *tms, struct msgb *msg, unsigned in
 	m=5; pdu_type=bits_to_uint(bits+n, m); n=n+m;
 	m=2; cpti=bits_to_uint(bits+n, m); n=n+m;
 	switch(cpti) {
-		case 1:
+		case 0: /* SNA */
+			m=8; calling_ssi=bits_to_uint(bits+n, m); n=n+m;
+			break;
+		case 1: /* SSI */
 			m=24; calling_ssi=bits_to_uint(bits+n, m); n=n+m;
 			break;
-		case 2:
+		case 2: /* TETRA Subscriber Identity (TSI) */
 			m=24; calling_ssi=bits_to_uint(bits+n, m); n=n+m;
 			m=24; calling_ext=bits_to_uint(bits+n, m); n=n+m;
 			break;
 		default:
 			/* hgw co to jest */
-			printf("\nparse_d_sds_data: ZLY CPTI %i\n",cpti);
+			printf("\nparse_d_sds_data: BAD CPTI %i\n",cpti);
 			return(1);
 			break;
+
 	}
 
 	sprintf(descr,"CPTI:%i CalledSSI:%i CallingSSI:%i CallingEXT:%i ",cpti,rsd.addr.ssi,calling_ssi,calling_ext);
@@ -265,139 +290,246 @@ uint parse_d_sds_data(struct tetra_mac_state *tms, struct msgb *msg, unsigned in
 			sprintf(tmpstr," UserData4: len:%i protoid:%2.2X(%s) ",datalen,protoid,get_sds_type(protoid));
 			strcat(descr,tmpstr);
 
-			uint8_t c;
-			switch (protoid) {
-				case TETRA_SDS_PROTO_SIMPLE_LOC:
-					sprintf(tmpstr,"SIMPLE_LOCATION_SYSTEM:[");
-					strcat(descr,tmpstr);
+			/* SDS-TL header */
+			if (protoid&0x80) {
+				is_sdstl=1;
+				m=4; message_type=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
+				strcat(descr,"SDS-TL:[ MsgType:");
 
-					decode_simplelocsystem(tmpstr2, sizeof(tmpstr2),bits+n,datalen);
-					strcat(descr,tmpstr2);
-					sprintf(tmpstr,"]\n");
-					strcat(descr,tmpstr);
-					break;
+				switch(message_type) {
+					case 0: /* SDS-TRANSFER page 1182 */
+						strcat(descr,"SDS-TRANSFER");
+						m=2; sdstl_delivery_report_request=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m; /* page 1186 */
+						m=1; sdstl_service_selection=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m; /* page 1189 1:to group*/
+						m=1; sdstl_storage_control=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m; /* page 1189 */
+						m=8; sdstl_message_reference=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
 
-				case TETRA_SDS_PROTO_LOCSYSTEM:
-					sprintf(tmpstr,"LOCATION_SYSTEM:[");
-					strcat(descr,tmpstr);
-
-					decode_locsystem(tmpstr2, sizeof(tmpstr2),bits+n,datalen);
-					strcat(descr,tmpstr2);
-					sprintf(tmpstr,"]\n");
-					strcat(descr,tmpstr);
-					break;
-
-				case TETRA_SDS_PROTO_LIP:
-					sprintf(tmpstr,"LIP:[");
-					strcat(descr,tmpstr);
-
-					decode_lip(tmpstr2, sizeof(tmpstr2),bits+n,datalen);
-					strcat(descr,tmpstr2);
-					sprintf(tmpstr,"]");
-					strcat(descr,tmpstr);
-
-
-					break;
-
-				case TETRA_SDS_PROTO_TXTMSG:
-				case TETRA_SDS_PROTO_SIMPLE_TXTMSG:
-				case TETRA_SDS_PROTO_SIMPLE_ITXTMSG:
-				case TETRA_SDS_PROTO_ITXTMSG:
-					m=1; reserved1=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
-					m=7; coding_scheme=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
-					sprintf(tmpstr," coding_scheme:%2.2x ",coding_scheme);
-					strcat(descr,tmpstr);
-
-					sprintf(tmpstr,"DATA:[");
-					strcat(descr,tmpstr);
-
-					/* dump text message */
-					switch(coding_scheme) {
-						case 0: /* 7-bit gsm encoding */
-							sprintf(tmpstr," *7bit* ");
-							strcat(descr,tmpstr);
-							m=8;
-							l=0;
-							while(datalen>=m) {
-								udata[l]=bits_to_uint(bits+n, m); n=n+m;
-								l++;
-								datalen=datalen-m;
-							}
-							/* TODO: maybe skip the first two bytes? i've never seen a 7-bit SDS in the wild --sq5bpf */
-							datalen=decode_pdu(tmpstr2,udata,l);
-							/* dump */
-							for(a=0;a<datalen;a++) {
-								if (isprint(tmpstr2[a])) {
-									sprintf(tmpstr,"%c",tmpstr2[a]);
-								}
-								else {
-									sprintf(tmpstr,"\\x%2.2X",tmpstr2[a]);
-								}
-								strcat(descr,tmpstr);
-
-
-							}
-							strcat(descr,"]");
-
-
-							break;
-						case 0x1A: /* SO/IEC 10646-1 [22] UCS-2/UTF-16BE (16-bit) alphabet */
-							/* TODO: use iconv or whatever else
-							 * for now we'll just use the 8-bit decoding function, 
-							 * every other bit will be written as \x00. ugly but readable --sq5bpf 
-							 */
-
-							sprintf(tmpstr," *UTF16* ");
-							strcat(descr,tmpstr);
-
-						default: /* 8-bit */
-							m=8;
-							l=0;
-							while(datalen>=m) {
-								udata[l]=bits_to_uint(bits+n, m); n=n+m;
-								l++;
-								datalen=datalen-m;
-							}
-							/* TODO: the first two bytes are often garbage. either parse it or skip it 
-							 * i guess i'll have to read the etsi specifications better --sq5bpf */
-
-							for(a=0;a<l;a++) {
-								if (isprint(udata[a])) {
-									sprintf(tmpstr,"%c",udata[a]);
-								}
-								else {
-									sprintf(tmpstr,"\\x%2.2X",udata[a]);
-								}
-								strcat(descr,tmpstr);
-
-
-							}
-							strcat(descr,"]");
-							break;
-					}
-					break;
-
-				default:	
-					sprintf(tmpstr,"DATA:[");
-					strcat(descr,tmpstr);
-					/* other message */
-					/* hexdump */
-					m=8;
-					l=0;
-					while(datalen>=m) {
-						udata[l]=bits_to_uint(bits+n, m); n=n+m;
-						l++;
-						datalen=datalen-m;
-					}
-					/* dump */
-					for(a=0;a<l;a++) {
-						sprintf(tmpstr,"0x%2.2X ",udata[a]);
+						sprintf(tmpstr," MSG_REF:%i TO_GROUP:%i",sdstl_message_reference,sdstl_service_selection);
 						strcat(descr,tmpstr);
-					}
-					strcat(descr,"]");
-					break;
+						if (sdstl_storage_control) {
+							/* Storage/forward control information is available */
+							m=5; sdstl_validity_period=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
+							m=3; sdstl_forw_address_type=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
 
-			}	
+							sprintf(tmpstr," Validity_period:%i",sdstl_validity_period);
+							strcat(descr,tmpstr);
+
+							switch(sdstl_forw_address_type) {
+								case 0: /* SNA */
+									m=8; sdstl_forw_address=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
+									sprintf(tmpstr," Forward_addr_SNA:%i",sdstl_forw_address);
+									strcat(descr,tmpstr);
+									break;
+								case 1: /* SSI */
+									m=24; sdstl_forw_address=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
+									sprintf(tmpstr," Forward_addr_SSI:%i",sdstl_forw_address);
+									strcat(descr,tmpstr);
+									break;
+								case 2: /* TETRA Subscriber Identity (TSI) */
+									m=24; sdstl_forw_address=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
+									m=24; sdstl_forw_address_ext=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
+									sprintf(tmpstr," Forward_addr_SSI:%i:EXT:%i",sdstl_forw_address,sdstl_forw_address_ext);
+									strcat(descr,tmpstr);
+									break;
+								case 3: /* External subscriber number */
+									m=8; sdstl_extnum_digits=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
+									strcat(descr," Forward_addr_EXT:");
+									l=sdstl_extnum_digits;
+									while(l) {
+										m=4; sdstl_extnum_digit=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
+										sprintf(tmpstr,"%c",'0'+sdstl_extnum_digit);
+										strcat(descr,tmpstr);
+										l--;
+									}
+									if (sdstl_extnum_digits&0x1) {
+										/* odd number, eat dummy digit */
+										n=n+4;
+									}
+									break;
+								case 7: /* no forward address */
+									strcat(descr," Forward_addr_none");
+									break;
+								default:
+									/* hgw co to jest */
+									sprintf(tmpstr," Forward_addr_BAD:%i",sdstl_forw_address_type);
+									strcat(descr,tmpstr);
+									return(1);
+									break;
+
+							}
+
+
+						}
+
+						break;
+					case 1: /* SDS-REPORT */
+						strcat(descr,"SDS-REPORT");
+						n=n+12;
+						decode_sds=0;
+						break;
+
+					case 2: /* SDS-ACK */
+						strcat(descr,"SDS-ACK ");
+						decode_sds=0;
+
+						n=n+12;
+						break;
+					default:
+						decode_sds=0;
+						if (message_type&0x8) {
+							sprintf(tmpstr,"Defined_by_application_%i ",message_type);
+						} else {
+							sprintf(tmpstr,"Reserved_for_add_msg_types_%i ",message_type);
+						}
+						strcat(descr,tmpstr);
+						n=n+12;
+						break;
+				}
+
+				strcat(descr,"] ");
+			}
+
+			if (datalen>2047) {  
+				strcat(descr,"ERROR: SDS too short");
+				decode_sds=0; 
+			}
+
+			uint8_t c;
+			if (decode_sds) {
+				switch (protoid) {
+					case TETRA_SDS_PROTO_SIMPLE_LOC:
+						sprintf(tmpstr,"SIMPLE_LOCATION_SYSTEM:[");
+						strcat(descr,tmpstr);
+
+						decode_simplelocsystem(tmpstr2, sizeof(tmpstr2),bits+n,datalen);
+						strcat(descr,tmpstr2);
+						sprintf(tmpstr,"]\n");
+						strcat(descr,tmpstr);
+						break;
+
+					case TETRA_SDS_PROTO_LOCSYSTEM:
+						sprintf(tmpstr,"LOCATION_SYSTEM:[");
+						strcat(descr,tmpstr);
+
+						decode_locsystem(tmpstr2, sizeof(tmpstr2),bits+n,datalen);
+						strcat(descr,tmpstr2);
+						sprintf(tmpstr,"]\n");
+						strcat(descr,tmpstr);
+						break;
+
+					case TETRA_SDS_PROTO_LIP:
+						sprintf(tmpstr,"LIP:[");
+						strcat(descr,tmpstr);
+
+						decode_lip(tmpstr2, sizeof(tmpstr2),bits+n,datalen);
+						strcat(descr,tmpstr2);
+						sprintf(tmpstr,"]");
+						strcat(descr,tmpstr);
+
+
+						break;
+
+					case TETRA_SDS_PROTO_TXTMSG:
+					case TETRA_SDS_PROTO_SIMPLE_TXTMSG:
+					case TETRA_SDS_PROTO_SIMPLE_ITXTMSG:
+					case TETRA_SDS_PROTO_ITXTMSG:
+						m=1; reserved1=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
+						m=7; coding_scheme=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
+						sprintf(tmpstr," coding_scheme:%2.2x ",coding_scheme);
+						strcat(descr,tmpstr);
+
+						sprintf(tmpstr,"DATA:[");
+						strcat(descr,tmpstr);
+
+						/* dump text message */
+						switch(coding_scheme) {
+							case 0: /* 7-bit gsm encoding */
+								sprintf(tmpstr," *7bit* ");
+								strcat(descr,tmpstr);
+								m=8;
+								l=0;
+								while(datalen>=m) {
+									udata[l]=bits_to_uint(bits+n, m); n=n+m;
+									l++;
+									datalen=datalen-m;
+								}
+								/* TODO: maybe skip the first two bytes? i've never seen a 7-bit SDS in the wild --sq5bpf */
+								datalen=decode_pdu(tmpstr2,udata,l);
+								/* dump */
+								for(a=0;a<datalen;a++) {
+									if (isprint(tmpstr2[a])) {
+										sprintf(tmpstr,"%c",tmpstr2[a]);
+									}
+									else {
+										sprintf(tmpstr,"\\x%2.2X",tmpstr2[a]);
+									}
+									strcat(descr,tmpstr);
+
+
+								}
+								strcat(descr,"]");
+
+
+								break;
+							case 0x1A: /* SO/IEC 10646-1 [22] UCS-2/UTF-16BE (16-bit) alphabet */
+								/* TODO: use iconv or whatever else
+								 * for now we'll just use the 8-bit decoding function, 
+								 * every other bit will be written as \x00. ugly but readable --sq5bpf 
+								 */
+
+								sprintf(tmpstr," *UTF16* ");
+								strcat(descr,tmpstr);
+
+							default: /* 8-bit */
+								m=8;
+								l=0;
+								while(datalen>=m) {
+									udata[l]=bits_to_uint(bits+n, m); n=n+m;
+									l++;
+									datalen=datalen-m;
+								}
+								/* TODO: the first two bytes are often garbage. either parse it or skip it 
+								 * i guess i'll have to read the etsi specifications better --sq5bpf */
+
+								for(a=0;a<l;a++) {
+									if (isprint(udata[a])) {
+										sprintf(tmpstr,"%c",udata[a]);
+									}
+									else {
+										sprintf(tmpstr,"\\x%2.2X",udata[a]);
+									}
+									strcat(descr,tmpstr);
+
+
+								}
+								strcat(descr,"]");
+								break;
+						}
+						break;
+
+					default:	
+						sprintf(tmpstr,"DATA:[");
+						strcat(descr,tmpstr);
+						/* other message */
+						/* hexdump */
+						m=8;
+						l=0;
+						while(datalen>=m) {
+							udata[l]=bits_to_uint(bits+n, m); n=n+m;
+							l++;
+							datalen=datalen-m;
+						}
+						/* dump */
+						for(a=0;a<l;a++) {
+							sprintf(tmpstr,"0x%2.2X ",udata[a]);
+							strcat(descr,tmpstr);
+						}
+						strcat(descr,"]");
+						break;
+
+				}	
+
+			}
 
 
 	}

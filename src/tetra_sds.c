@@ -479,7 +479,7 @@ int decode_locsystem(char *out, int outlen,uint8_t *bits,int datalen)
 	uint8_t  rtcm_sthealth;
 	uint8_t rtcm_parity2;
 	buf[0]=0;
-	datalen=datalen-16; n=n+16; /* skip the sds-tl 2-byte header */
+/*	datalen=datalen-16; n=n+16;  skip the sds-tl 2-byte header, not needed now */
 	m=8; locsystem_coding_scheme=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
 	switch (locsystem_coding_scheme) {
 		case 0: /* NMEA */
@@ -500,7 +500,7 @@ int decode_locsystem(char *out, int outlen,uint8_t *bits,int datalen)
 			//snprintf(out,outlen,"RTCM SC-104 (not implemented)  msgtype:%i stationid:%i parity:%i ",rtcm_msgtype,rtcm_stationid,rtcm_parity); outlen=outlen-30;
 
 			break;
-
+/* i've seen a type 0x80 proprietary message, but this something different from simple location system 0x80 */ 
 		default: /* reserved */
 			snprintf(out,outlen,"proprietary coding scheme 0x%2.2x: ",locsystem_coding_scheme); outlen=outlen-33;
 
@@ -551,7 +551,9 @@ int decode_simplelocsystem(char *out, int outlen,uint8_t *bits,int datalen)
 			snprintf(out,outlen,"RTCM SC-104 (not implemented)"); outlen=outlen-30;
 			break;
 
-		case 0x80: /* some proprietary system seen in the wild in Spain and other countries */
+		case 0x80: 
+			/* some proprietary system seen in the wild in Spain, Itlay and France
+			 * some speculate it's either from DAMM or SEPURA  */
 			m=12; unk_flags=bits_to_uint(bits+n,m); n=n+m; /* skip some unknown part */
 			m=24; loc_lattitude=bits_to_uint(bits+n,m); n=n+m;
 			m=24; loc_longtitude=bits_to_uint(bits+n,m); n=n+m;
