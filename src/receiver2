@@ -1,11 +1,30 @@
 #!/bin/sh
-# This is an example how to use simdemod.py --sq5bpf
+# This is an example how to use simdemod2.py --sq5bpf
 # this is receiver 1, only with the port changed, it will be used in the example documentation
+
+# you can also set GR_VERSION yourself outside of this script --sq5bpf
+[ "$GR_VERSION" ] || GR_VERSION=`gnuradio-config-info -v|cut -d . -f 1-2`
+case $GR_VERSION in
+	3.6) 
+		GR_DIR=python-3.6
+		;;
+	3.8) 
+		GR_DIR=python-3.7 #hack: haven't tried, but maybe it will work? --sq5bpf 
+		;;
+	3.7) 
+		GR_DIR=python-3.7
+		;;
+	*)		
+		echo "Unsuported gnuradio version $GR_VERSION"
+		exit 1
+		;;
+esac
+
 export TETRA_HACK_PORT=7380 #i might as well have made this a command line parameter, oh well :)
 export TETRA_HACK_RXID=$1
 FIFO=/tmp/fifo$1
 mkfifo $FIFO
 ulimit -c unlimited
-demod/python/simdemod2.py -o /dev/stdout -i $FIFO | ./float_to_bits /dev/stdin /dev/stdout | ./tetra-rx /dev/stdin 
+demod/${GR_DIR}/simdemod2.py -o /dev/stdout -i $FIFO | ./float_to_bits /dev/stdin /dev/stdout | ./tetra-rx /dev/stdin 
 
 
