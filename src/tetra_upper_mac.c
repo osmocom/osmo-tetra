@@ -65,6 +65,10 @@ static void rx_bcast(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 	printf("BNCH SYSINFO (DL %u Hz, UL %u Hz), service_details 0x%04x LA:%u ",
 			dl_freq, ul_freq, sid.mle_si.bs_service_details,sid.mle_si.la);
 	/* sq5bpf */
+
+	tetra_hack_freq_band=sid.freq_band;
+	tetra_hack_freq_offset=sid.freq_offset;
+
 	tetra_hack_dl_freq=dl_freq;
 	tetra_hack_ul_freq=ul_freq;
 	tetra_hack_la=sid.mle_si.la;
@@ -546,7 +550,153 @@ uint parse_d_sds_data(struct tetra_mac_state *tms, struct msgb *msg, unsigned in
 
 }
 
+/* decode 18.5.17 Neighbour cell information for CA */
+/* str 535, przyklad str 1294 */
+int parse_nci_ca( uint8_t *bits)
+{
+	int n,m;
+	char buf[1024];
+	char buf2[128];
+	char freqinfo[128];
+	n=0;
+	m=5; uint8_t cell_id=bits_to_uint(bits+n, m); n=n+m;
+	m=2; uint8_t cell_reselection=bits_to_uint(bits+n, m); n=n+m;
+	m=1; uint8_t neig_cell_synced=bits_to_uint(bits+n, m); n=n+m;
+	m=2; uint8_t cell_load=bits_to_uint(bits+n, m); n=n+m;
+	m=12; uint16_t main_carrier_num=bits_to_uint(bits+n, m); n=n+m;
+	/* the band and offset info is from the sysinfo message, not sure if this is correct */
+	sprintf(buf," NCI:[cell_id:%i cell_resel:%i neigh_synced:%i cell_load:%i carrier:%i %iHz",cell_id,cell_reselection,neig_cell_synced,cell_load,main_carrier_num,tetra_dl_carrier_hz(tetra_hack_freq_band, main_carrier_num, tetra_hack_freq_offset));
 
+	sprintf(freqinfo,"TETMON_begin FUNC:FREQINFO DLF:%i",tetra_dl_carrier_hz(tetra_hack_freq_band, main_carrier_num, tetra_hack_freq_offset));
+
+	m=1; uint8_t obit=bits_to_uint(bits+n, m); n=n+m;
+	if (obit) {
+		m=1; uint8_t pbit_main_carrier_num_ext=bits_to_uint(bits+n, m); n=n+m;
+		if (pbit_main_carrier_num_ext) {
+			m=4; uint8_t freq_band=bits_to_uint(bits+n, m); n=n+m;
+			m=2; uint8_t freq_offset=bits_to_uint(bits+n, m); n=n+m;
+			m=3; uint8_t duplex_spacing=bits_to_uint(bits+n, m); n=n+m;
+			m=1; uint8_t reverse=bits_to_uint(bits+n, m); n=n+m;
+			uint32_t dlfext=tetra_dl_carrier_hz(freq_band, main_carrier_num, freq_offset);
+			uint32_t ulfext=tetra_ul_carrier_hz(freq_band, main_carrier_num, freq_offset,duplex_spacing,reverse);
+
+			sprintf(buf2," band:%i offset:%i freq:%iHz uplink:%iHz (duplex:%i rev:%i)",freq_band,freq_offset,dlfext,ulfext,duplex_spacing,reverse);
+			strcat(buf,buf2);
+			sprintf(buf2,"TETMON_begin FUNC:FREQINFO DLF:%i ULF:%i",dlfext, ulfext); 
+			strcat(freqinfo,buf2);
+		}
+		m=1; uint8_t pbit_mcc=bits_to_uint(bits+n, m); n=n+m;
+		if (pbit_mcc) {
+			m=10; uint16_t mcc=bits_to_uint(bits+n, m); n=n+m;
+			sprintf(buf2," MCC:%i",mcc);
+			strcat(buf,buf2);
+			sprintf(buf2," MCC:%4.4x",mcc);
+			strcat(freqinfo,buf2);
+		}
+
+		m=1; uint8_t pbit_mnc=bits_to_uint(bits+n, m); n=n+m;
+		if (pbit_mnc) {
+			m=14; uint16_t mnc=bits_to_uint(bits+n, m); n=n+m;
+			sprintf(buf2," MNC:%i",mnc);
+			strcat(buf,buf2);
+			sprintf(buf2," MNC:%4.4x",mnc);
+			strcat(freqinfo,buf2);
+		}
+
+		m=1; uint8_t pbit_la=bits_to_uint(bits+n, m); n=n+m;
+		if (pbit_la) {
+			m=14; uint16_t la=bits_to_uint(bits+n, m); n=n+m;
+			sprintf(buf2," LA:%i",la);
+			strcat(buf,buf2);
+			strcat(freqinfo,buf2);
+		}
+
+		m=1; uint8_t pbit_max_ms_txpower=bits_to_uint(bits+n, m); n=n+m;
+		if (pbit_max_ms_txpower) {
+			m=3; uint8_t max_ms_txpower=bits_to_uint(bits+n, m); n=n+m;
+		}
+
+		m=1; uint8_t pbit_min_rx_level=bits_to_uint(bits+n, m); n=n+m;
+		if (pbit_min_rx_level) {
+			m=4; uint8_t min_rx_level=bits_to_uint(bits+n, m); n=n+m;
+		}
+
+		m=1; uint8_t pbit_subscr_class=bits_to_uint(bits+n, m); n=n+m;
+		if (pbit_subscr_class) {
+			m=16; uint16_t subscr_class=bits_to_uint(bits+n, m); n=n+m;
+		}
+
+		m=1; uint8_t pbit_bs_srv_details=bits_to_uint(bits+n, m); n=n+m;
+		if (pbit_bs_srv_details) {
+			m=12; uint16_t bs_srv_details=bits_to_uint(bits+n, m); n=n+m;
+		}
+
+		m=1; uint8_t pbit_timeshare_info=bits_to_uint(bits+n, m); n=n+m;
+		if (pbit_timeshare_info) {
+			m=5; uint8_t timeshare_info=bits_to_uint(bits+n, m); n=n+m;
+		}
+
+		m=1; uint8_t pbit_tdma_frame_offset=bits_to_uint(bits+n, m); n=n+m;
+		if (pbit_tdma_frame_offset) {
+			m=6; uint8_t tdma_frame_offset=bits_to_uint(bits+n, m); n=n+m;
+		}
+	}
+	sprintf(buf2,"] ");
+	strcat(buf,buf2);
+	printf("%s",buf);
+
+	sprintf(buf2," RX:%i TETMON_end",tetra_hack_rxid);
+	strcat(freqinfo,buf2);
+	sendto(tetra_hack_live_socket, (char *)&freqinfo, 128, 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
+
+	return(n);
+}
+
+uint parse_d_nwrk_broadcast(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len)
+{
+	uint8_t *bits = msg->l3h;
+	int n,m,i;
+
+	/* TMLE_PDISC_MLE 3 bits
+	 * TMLE_PDUT_D_NWRK_BROADCAST 3 bits */
+	n=3+3;
+
+	m=16; uint16_t cell_reselect_parms=bits_to_uint(bits+n, m); n=n+m;
+	m=2; uint16_t cell_load=bits_to_uint(bits+n, m); n=n+m;
+	m=1; uint16_t optional_elements=bits_to_uint(bits+n, m); n=n+m;
+	printf("\nD_NWRK_BROADCAST:[ cell_reselect:0x%4.4x cell_load:%i", cell_reselect_parms,cell_load);
+	if (optional_elements) {
+		m=1; uint16_t pbit_tetra_time=bits_to_uint(bits+n, m); n=n+m;
+		if (pbit_tetra_time) 
+		{
+			m=24; uint32_t tetra_time_utc=bits_to_uint(bits+n, m); n=n+m;
+			m=1; uint8_t tetra_time_offset_sign=bits_to_uint(bits+n, m); n=n+m;
+			m=6; uint8_t tetra_time_offset=bits_to_uint(bits+n, m); n=n+m;
+			m=6; uint8_t tetra_time_year=bits_to_uint(bits+n, m); n=n+m;
+			m=11; uint16_t tetra_time_reserved=bits_to_uint(bits+n, m); n=n+m; /* must be 0x7ff */
+			printf(" time[secs:%i offset:%c%imin year:%i reserved:0x%4.4x]",tetra_time_utc,tetra_time_offset_sign?'-':'+',tetra_time_offset*15,2000+tetra_time_year,tetra_time_reserved);
+			/* we could decode the time here, but it is not accurate on the networks that i see anyway */
+		}
+
+
+		m=1; uint16_t pbit_neigh_cells=bits_to_uint(bits+n, m); n=n+m;
+
+		//	printf(" pbit_tetra_time:%i pbit_neigh_cells:%i",pbit_tetra_time,pbit_neigh_cells);
+		if (pbit_neigh_cells) 
+		{
+			m=3; uint16_t num_neigh_cells=bits_to_uint(bits+n, m); n=n+m;
+			printf(" num_cells:%i",num_neigh_cells);
+			for (i=0;i<num_neigh_cells;i++) {
+				m=parse_nci_ca(bits+n); n=n+m;
+			}
+
+		}
+
+
+	}
+	printf("] RX:%i\n",tetra_hack_rxid);
+
+}
 
 /* Receive TL-SDU (LLC SDU == MLE PDU) */
 static int rx_tl_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len)
@@ -603,6 +753,14 @@ static int rx_tl_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int
 			break;
 		case TMLE_PDISC_MLE:
 			printf(" %s", tetra_get_mle_pdut_name(bits_to_uint(bits+3, 3), 0));
+			/* parse d-nwrk-broadcast */
+			switch(bits_to_uint(bits+3, 3))
+			{
+				case TMLE_PDUT_D_NWRK_BROADCAST:
+					parse_d_nwrk_broadcast(tms,msg,len);
+				default:
+					break;
+			}
 			break;
 		default:
 			break;

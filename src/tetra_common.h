@@ -70,6 +70,10 @@ int tetra_hack_rxid;
 uint32_t tetra_hack_dl_freq, tetra_hack_ul_freq;
 uint16_t tetra_hack_la;
 
+uint8_t  tetra_hack_freq_band;
+uint8_t  tetra_hack_freq_offset;
+
+
 /* end tetra hack --sq5bpf */
 
 #include "tetra_tdma.h"
