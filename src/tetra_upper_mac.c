@@ -85,11 +85,12 @@ static void rx_bcast(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 	memcpy(&tms->last_sid, &sid, sizeof(sid));
 }
 
-const char *tetra_alloc_dump(const struct tetra_chan_alloc_decoded *cad, struct tetra_mac_state *tms)
+const char *tetra_alloc_dump(const struct tetra_chan_alloc_decoded *cad, struct tetra_mac_state *tms, int send_telive_msg)
 {
 	static char buf[64];
 	char *cur = buf;
 	unsigned int freq_band, freq_offset;
+	char freqinfo[128];
 
 	if (cad->ext_carr_pres) {
 		freq_band = cad->ext_carr.freq_band;
@@ -103,7 +104,18 @@ const char *tetra_alloc_dump(const struct tetra_chan_alloc_decoded *cad, struct 
 			tetra_get_alloc_t_name(cad->type), cad->timeslot,
 			tetra_get_ul_dl_name(cad->ul_dl),
 			tetra_dl_carrier_hz(freq_band, cad->carrier_nr, freq_offset));
+	if (send_telive_msg) {
+		switch (cad->ul_dl) {
 
+			case 3: /* uplink + downlink */
+				sprintf(freqinfo,"TETMON_begin FUNC:FREQINFO2 DLF:%i RX:%i TETMON_end",tetra_dl_carrier_hz(freq_band, cad->carrier_nr, freq_offset),tetra_hack_rxid);
+				sendto(tetra_hack_live_socket, (char *)&freqinfo, 128, 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
+				break;
+
+			default:
+				break;
+		}
+	}
 	return buf;
 }
 
@@ -567,7 +579,7 @@ int parse_nci_ca( uint8_t *bits)
 	/* the band and offset info is from the sysinfo message, not sure if this is correct */
 	sprintf(buf," NCI:[cell_id:%i cell_resel:%i neigh_synced:%i cell_load:%i carrier:%i %iHz",cell_id,cell_reselection,neig_cell_synced,cell_load,main_carrier_num,tetra_dl_carrier_hz(tetra_hack_freq_band, main_carrier_num, tetra_hack_freq_offset));
 
-	sprintf(freqinfo,"TETMON_begin FUNC:FREQINFO DLF:%i",tetra_dl_carrier_hz(tetra_hack_freq_band, main_carrier_num, tetra_hack_freq_offset));
+	sprintf(freqinfo,"TETMON_begin FUNC:FREQINFO1 DLF:%i",tetra_dl_carrier_hz(tetra_hack_freq_band, main_carrier_num, tetra_hack_freq_offset));
 
 	m=1; uint8_t obit=bits_to_uint(bits+n, m); n=n+m;
 	if (obit) {
@@ -582,7 +594,7 @@ int parse_nci_ca( uint8_t *bits)
 
 			sprintf(buf2," band:%i offset:%i freq:%iHz uplink:%iHz (duplex:%i rev:%i)",freq_band,freq_offset,dlfext,ulfext,duplex_spacing,reverse);
 			strcat(buf,buf2);
-			sprintf(buf2,"TETMON_begin FUNC:FREQINFO DLF:%i ULF:%i",dlfext, ulfext); 
+			sprintf(buf2,"TETMON_begin FUNC:FREQINFO1 DLF:%i ULF:%i",dlfext, ulfext); 
 			strcat(freqinfo,buf2);
 		}
 		m=1; uint8_t pbit_mcc=bits_to_uint(bits+n, m); n=n+m;
@@ -803,9 +815,8 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 
 	if (rsd.addr.type == ADDR_TYPE_NULL)
 		goto out;
-
 	if (rsd.chan_alloc_pres)
-		printf("ChanAlloc=%s ", tetra_alloc_dump(&rsd.cad, tms));
+		printf("ChanAlloc=%s ", tetra_alloc_dump(&rsd.cad, tms,(rsd.encryption_mode==0)));
 	if (rsd.slot_granting.pres)
 		printf("SlotGrant=%u/%u ", rsd.slot_granting.nr_slots,
 				rsd.slot_granting.delay);
