@@ -3,7 +3,7 @@
 # this is receiver 1, only with the port changed, it will be used in the example documentation
 
 # you can also set GR_VERSION yourself outside of this script --sq5bpf
-[ "$GR_VERSION" ] || GR_VERSION=`gnuradio-config-info -v|cut -d . -f 1-2`
+[ "$GR_VERSION" ] || GR_VERSION=`gnuradio-config-info -v|cut -d . -f 1-2|tr -d v`
 case $GR_VERSION in
 	3.6) 
 		GR_DIR=python-3.6
