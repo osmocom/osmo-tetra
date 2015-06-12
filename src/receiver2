@@ -21,6 +21,7 @@ case $GR_VERSION in
 esac
 
 export TETRA_HACK_PORT=7380 #i might as well have made this a command line parameter, oh well :)
+#export TETRA_HACK_IP=127.0.0.1 #you can send to another host too
 export TETRA_HACK_RXID=$1
 FIFO=/tmp/fifo$1
 mkfifo $FIFO

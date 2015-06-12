@@ -47,7 +47,7 @@ int main(int argc, char **argv)
 	int fd;
 	struct tetra_rx_state *trs;
 	struct tetra_mac_state *tms;
-
+	char *tmphost;
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s <file_with_1_byte_per_bit>\n", argv[0]);
 		exit(1);
@@ -75,7 +75,12 @@ int main(int argc, char **argv)
 		tetra_hack_socklen=sizeof(struct sockaddr_in);
 		tetra_hack_live_sockaddr.sin_family = AF_INET;
 		tetra_hack_live_sockaddr.sin_port = htons(atoi(getenv("TETRA_HACK_PORT")));
-		inet_aton("127.0.0.1", & tetra_hack_live_sockaddr.sin_addr);
+		tmphost=getenv("TETRA_HACK_IP");
+		if (!tmphost) {
+			tmphost="127.0.0.1";
+		}
+		//inet_aton("127.0.0.1", & tetra_hack_live_sockaddr.sin_addr);
+		inet_aton(tmphost, & tetra_hack_live_sockaddr.sin_addr);
 		if (tetra_hack_live_socket<1) tetra_hack_live_socket=0;
 	}
 
