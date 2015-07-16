@@ -138,7 +138,7 @@ char *parse_lip_longtitude(uint32_t lip_longtitude) {
 	static char lonstr[16];
 	/* note: this should be 1<<25 for the calculations (according to the documentation), but for some reason 1<<24 is correct, maybe i skipped a bit somewhere? */
 	if (lip_longtitude&(1<<24)) {
-		longtitude=(((1<<24)-lip_longtitude)*180.0)/(1.0*(1<<24)); londir='W';
+		longtitude=(((1<<25)-lip_longtitude)*180.0)/(1.0*(1<<24)); londir='W';
 	} else
 	{
 		longtitude=(lip_longtitude*180.0)/(1.0*(1<<24)); londir='E';
@@ -215,7 +215,7 @@ int decode_lip(char *out, int outlen,uint8_t *bits,int datalen)
 
 			/* note: this should be 1<<25 for the calculations (according to the documentation), but for some reason 1<<24 is correct, maybe i skipped a bit somewhere? */
 			if (lip_longtitude&(1<<24)) {
-				longtitude=(((1<<24)-lip_longtitude)*180.0)/(1.0*(1<<24)); londir='W';
+				longtitude=(((1<<25)-lip_longtitude)*180.0)/(1.0*(1<<24)); londir='W';
 			} else
 			{
 				longtitude=(lip_longtitude*180.0)/(1.0*(1<<24)); londir='E';
