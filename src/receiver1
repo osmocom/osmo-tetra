@@ -1,5 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 # This is an example how to use simdemod2.py --sq5bpf
+
+#Changelog:
+#20151102: see if the fifo exists, and if it is really a fifo --sq5bpf
 
 # you can also set GR_VERSION yourself outside of this script --sq5bpf
 [ "$GR_VERSION" ] || GR_VERSION=`gnuradio-config-info -v|cut -d . -f 1-2|tr -d v`
@@ -23,7 +26,32 @@ export TETRA_HACK_PORT=7379 #i might as well have made this a command line param
 #export TETRA_HACK_IP=127.0.0.1 #you can send to another host too
 export TETRA_HACK_RXID=$1
 FIFO=/tmp/fifo$1
-mkfifo $FIFO
+
+
+
+#idiot-proofing checks, see if the fifo exists etc. comment out if it bothers you
+if [ -p $FIFO  ]; then
+	#fifo exists, do nothing
+	#we could try to read a bit from it, and throw an error if it's possible
+	#because it means that someone executed the receiver too early, but
+	#for now we'll leave it alone
+	:
+else
+	#maybe it's something else?
+	if [ -e $FIFO ]; then
+		echo "########################################################################"
+		echo
+		ls -la $FIFO
+		echo "$FIFO exists, and is not a named pipe! Probably you executed the grc flowgraph before running $0"
+		echo "Please close all programs, delete $FIFO , and this time execute $0 first and try again"
+		echo "And please read the telive_doc.pdf documentation that accompanies telive before using it."
+		echo
+		echo "########################################################################"
+		exit 1
+	else
+		mkfifo $FIFO
+	fi
+fi
 ulimit -c unlimited
 demod/${GR_DIR}/simdemod2.py -o /dev/stdout -i $FIFO | ./float_to_bits /dev/stdin /dev/stdout | ./tetra-rx /dev/stdin 
 
