@@ -1,3 +1,27 @@
+This is a modified version of osmo-tetra (original README contents are a
+few lines below).
+
+This version is patched to work with telive - a program for live listening
+of tetra traffic and recording it, displaying network data etc. 
+
+The most important changes are:
+- support parsing of SDS messages (text messages similar to SMS), including some location protocols
+- support parsing of D-SETUP, D-RELEASE, D-NWRK-BROADCAST
+- sending of data and voice traffic via UDP (for consumption with telive or some other program)
+- incorporate float_to_bits into tetra-rx
+- implement a crude AFC into tetra-rx and float_to_bits (enables the signal to be less precisely tuned)
+
+For more info about osmo-tetra-sq5bpf and telive:
+
+Main docs (read this first!): https://github.com/sq5bpf/telive/raw/master/telive_doc.pdf 
+Telive repository: https://github.com/sq5bpf/telive
+Modified osmo-tetra: https://github.com/sq5bpf/osmo-tetra-sq5bpf
+Script to automatically download/compile/install the acelp codec: https://github.com/sq5bpf/install-tetra-codec
+Forum thread: http://forums.radioreference.com/voice-control-channel-decoding-software/302347-tetra-decoding.html
+Tutorial: http://www.rtl-sdr.com/rtl-sdr-tutorial-listening-tetra-radio-channels/
+
+What follows is the original content of the README file:
+
 TETRA MAC/PHY layer experimentation code
 (C) 2010-2011 by Harald Welte <laforge@gnumonks.org>
 ======================================================================
