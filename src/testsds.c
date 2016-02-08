@@ -75,8 +75,45 @@ int char_to_ubits(char *c,unsigned char *out)
 	return(len);
 }
 
+show_ascii_strings(unsigned char *buf,int len)
+{
+	int i,len2;
+	unsigned char *buf2;
+	unsigned char c;
+	int waschar;
 
+	printf("Ascii/binary dump:\n");
 
+	for (i=0;i<8;i++)
+	{
+		buf2=buf+i;
+		len2=len-i;
+		printf("Bit shift %i:  [",i);
+		waschar=0;
+		while (len2>7)
+		{
+			c=bits_to_uint(buf2, 8); 
+			len2=len2-8; 
+			buf2=buf2+8;
+
+			if ((isprint(c))&&(c!='\n')&&(c!='\r')) 
+				//		if (1==0)
+			{ 
+				if (!waschar) printf(" ");
+				printf("%c",c); 
+				waschar=1;
+			} 
+			else 
+			{ 
+				if (waschar) printf(" ");
+				printf("\\x%2.2X ",c); 
+				waschar=0;
+			}
+		}
+		printf("]\tbits left: %i\n",len2);
+
+	}
+}
 
 int main(int argc,char **argv) {
 	unsigned char buf1[8192];
@@ -86,12 +123,16 @@ int main(int argc,char **argv) {
 	struct tetra_mac_state tms;
 	struct msgb msg;
 
-	//len1=char_to_ubits("0000000010011110100110001011110110010001111011001000100110",(char *)&buf1); //dummy header so the osmo-tetra functions work
 	len1=char_to_ubits("0000000010011110000000000000000000000001111011001000100110",(char *)&buf1); //dummy header so the osmo-tetra functions work
 	len=char_to_ubits(argv[1],(char *)&buf);
 	msg.l1h=(unsigned char *)&buf1;
 	msg.l3h=(unsigned char *)&buf;
 
+	show_ascii_strings((unsigned char *)&buf,len);
+
+	printf("\n\n");
+
 	parse_d_sds_data(&tms,&msg,len);
+
 
 }

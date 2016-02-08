@@ -464,7 +464,7 @@ uint parse_d_sds_data(struct tetra_mac_state *tms, struct msgb *msg, unsigned in
 								strcat(descr,tmpstr);
 								m=8;
 								l=0;
-								while(datalen>=m) {
+								while((datalen>=m)&&(n<=len)) {
 									udata[l]=bits_to_uint(bits+n, m); n=n+m;
 									l++;
 									datalen=datalen-m;
@@ -499,7 +499,7 @@ uint parse_d_sds_data(struct tetra_mac_state *tms, struct msgb *msg, unsigned in
 							default: /* 8-bit */
 								m=8;
 								l=0;
-								while(datalen>=m) {
+								while((datalen>=m)&&(n<=len)) {
 									udata[l]=bits_to_uint(bits+n, m); n=n+m;
 									l++;
 									datalen=datalen-m;
@@ -530,10 +530,11 @@ uint parse_d_sds_data(struct tetra_mac_state *tms, struct msgb *msg, unsigned in
 						/* hexdump */
 						m=8;
 						l=0;
-						while(datalen>=m) {
+						while((datalen>=m)&&(n<=len)) {
 							udata[l]=bits_to_uint(bits+n, m); n=n+m;
 							l++;
 							datalen=datalen-m;
+
 						}
 						/* dump */
 						for(a=0;a<l;a++) {
