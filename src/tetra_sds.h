@@ -20,6 +20,10 @@
  */
 
 #include <stdint.h>
+//#include <osmocom/core/utils.h>
+//#include <osmocom/core/msgb.h>
+//#include <osmocom/core/talloc.h>
+
 
 #ifndef HAVE_TETRA_SDS_H
 #define HAVE_TETRA_SDS_H
@@ -198,6 +202,10 @@ enum tetra_lip_velocitytypes {
 	TETRA_LIP_VELOCITY_HORIZ_VELOCITY_VERT_DIRTRAVEL_UNC = 7
 
 };
+
+unsigned int parse_d_sds_data(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len);
+
+
 int decode_lip(char *out, int outlen,uint8_t *bits,int datalen);
 
 /**************   Location System   **************/
