@@ -20,9 +20,6 @@
  */
 
 #include <stdint.h>
-//#include <osmocom/core/utils.h>
-//#include <osmocom/core/msgb.h>
-//#include <osmocom/core/talloc.h>
 
 
 #ifndef HAVE_TETRA_SDS_H
@@ -30,6 +27,7 @@
 
 /* Table 29.21: Protocol identifier information element contents */
 enum tetra_sds_protoid {
+	/* These are from the ETSI Tetra specification */
 	TETRA_SDS_PROTO_RESERVED	  = 0x00,
 	TETRA_SDS_PROTO_OTAK       		= 0x01,
 	TETRA_SDS_PROTO_SIMPLE_TXTMSG            = 0x02,
@@ -52,7 +50,51 @@ enum tetra_sds_protoid {
 	TETRA_SDS_PROTO_EEENCR2            = 0x88,
 	TETRA_SDS_PROTO_ITXTMSG            = 0x89,
 	TETRA_SDS_PROTO_MSMUSERHEAD            = 0x8a,
-	TETRA_SDS_PROTO_CONCAT_SDS2            = 0x8c
+	TETRA_SDS_PROTO_CONCAT_SDS2            = 0x8c,
+
+	/* Company-registered SDS protocol identifiers from 
+	 * http://www.etsi.org/WebSite/document/SDS%20TL-Protocol-%20Identifiers.xls
+	 * theoretically they are valid only when there is an SDS-TL header 
+	 * is present (or at least the filename suggests this)
+	 */
+	TETRA_SDS_PROTO_TELTRONIC1 = 0x40 /* Teltronic */, 
+	TETRA_SDS_PROTO_NOKIA1 = 0x41 /* Nokia */, 
+	TETRA_SDS_PROTO_THALES1 = 0x42 /* Thales */, 
+	TETRA_SDS_PROTO_TETRAMOU1 = 0x43 /* Tetra MoU */, 
+	TETRA_SDS_PROTO_BICK1 = 0x44 /* R&S Bick Mobilfunk GmbH */, 
+	TETRA_SDS_PROTO_BICK2 = 0x45 /* R&S Bick Mobilfunk GmbH */, 
+	TETRA_SDS_PROTO_EADS1 = 0x46 /* EADS Secure Networks Oy */, 
+	TETRA_SDS_PROTO_THALES2= 0x47 /* Thales UK */, 
+	TETRA_SDS_PROTO_THORCOM1 = 0x49 /* Thorcom Systems Ltd */, 
+	TETRA_SDS_PROTO_PMR1 = 0x4a /* PMR-R&D GmbH */, 
+	TETRA_SDS_PROTO_RHEINMETALL1 = 0x50 /* Rheinmetall defence GmbH */, 
+	TETRA_SDS_PROTO_TELTRONIC2 = 0xc0 /* Teltronic */, 
+	TETRA_SDS_PROTO_TETRAMOU2 = 0xc1 /* Tetra Mou */, 
+	TETRA_SDS_PROTO_EADS2 = 0xc2 /* EADS Secure Networks Oy */, 
+	TETRA_SDS_PROTO_TETRAASS1 = 0xc3 /* Tetra Association */, 
+	TETRA_SDS_PROTO_AIRWAVE1 = 0xc4 /* Airwave Solutions Ltd */, 
+	TETRA_SDS_PROTO_AIRWAVE2 = 0xc5 /* Airwave Solutions Ltd */, 
+	TETRA_SDS_PROTO_APD1 = 0xc6 /* APD Communications Ltd */, 
+	TETRA_SDS_PROTO_SEPURA1 = 0xc8 /* Sepura Ltd */, 
+	TETRA_SDS_PROTO_SEPURA2 = 0xc9 /* Sepura Ltd */, 
+	TETRA_SDS_PROTO_RHEINMETALL2 = 0xd0 /* Rheinmetall defence GmbH */, 
+	TETRA_SDS_PROTO_SEPURA3 = 0xd2 /* Sepura Ltd */, 
+	TETRA_SDS_PROTO_MOTOROLA1 = 0xdc /* Motorola A/s */, 
+	TETRA_SDS_PROTO_MOTOROLA2 = 0xdd /* Motorola A/s */, 
+	TETRA_SDS_PROTO_MOTOROLA3 = 0xde /* Motorola A/s */, 
+	TETRA_SDS_PROTO_MOTOROLA4 = 0xdf /* Motorola A/s */, 
+	TETRA_SDS_PROTO_MOTOROLA5 = 0xe0 /* Motorola A/s */, 
+	TETRA_SDS_PROTO_TERRAFIX1 = 0xe1 /* TERRAFIX Ltd */, 
+	TETRA_SDS_PROTO_TERRAFIX2 = 0xe2 /* TERRAFIX Ltd */, 
+	TETRA_SDS_PROTO_TERRAFIX3 = 0xe3 /* TERRAFIX Ltd */, 
+	TETRA_SDS_PROTO_MOTOROLA6 = 0xe6 /* Motorola A/s */, 
+	TETRA_SDS_PROTO_SEPURA4 = 0xec /* Sepura Plc. */, 
+	TETRA_SDS_PROTO_3TC1 = 0xed /* 3tc Software Ltd */, 
+	TETRA_SDS_PROTO_3TC2 = 0xee /* 3tc Software Ltd */, 
+	TETRA_SDS_PROTO_MOTOROLA7 = 0xf0 /* Motorola A/s */, 
+	TETRA_SDS_PROTO_THORCOM2 = 0xf4 /* Thorcom Systems Ltd. */, 
+	TETRA_SDS_PROTO_THALES3 = 0xfa /* Thales UK LTD */, 
+
 };
 
 
@@ -62,6 +104,7 @@ struct sds_type {
 };
 static const struct sds_type sds_types[]=
 {
+	/* These are from the ETSI Tetra specification */
 	{ TETRA_SDS_PROTO_RESERVED , "Reserved" },
 	{ TETRA_SDS_PROTO_OTAK , "OTAK" },
 	{ TETRA_SDS_PROTO_SIMPLE_TXTMSG , "Simple Text Messaging" },
@@ -85,6 +128,45 @@ static const struct sds_type sds_types[]=
 	{ TETRA_SDS_PROTO_ITXTMSG , "Immediate text messaging" },
 	{ TETRA_SDS_PROTO_MSMUSERHEAD , "Message with User Data Header" },
 	{ TETRA_SDS_PROTO_CONCAT_SDS2 , "Concatenated SDS message" },
+
+	/* http://www.etsi.org/WebSite/document/SDS%20TL-Protocol-%20Identifiers.xls */
+	{ TETRA_SDS_PROTO_TELTRONIC1, "Teltronic" },
+	{ TETRA_SDS_PROTO_NOKIA1, "Nokia" },
+	{ TETRA_SDS_PROTO_THALES1, "Thales" },
+	{ TETRA_SDS_PROTO_TETRAMOU1, "Tetra MoU" },
+	{ TETRA_SDS_PROTO_BICK1, "R&S Bick Mobilfunk GmbH" },
+	{ TETRA_SDS_PROTO_BICK2, "R&S Bick Mobilfunk GmbH" },
+	{ TETRA_SDS_PROTO_EADS1, "EADS Secure Networks Oy" },
+	{ TETRA_SDS_PROTO_THALES2, "Thales UK" },
+	{ TETRA_SDS_PROTO_THORCOM1, "Thorcom Systems Ltd" },
+	{ TETRA_SDS_PROTO_PMR1, "PMR-R&D GmbH" },
+	{ TETRA_SDS_PROTO_RHEINMETALL1, "Rheinmetall defence GmbH" },
+	{ TETRA_SDS_PROTO_TELTRONIC2, "Teltronic" },
+	{ TETRA_SDS_PROTO_TETRAMOU2, "Tetra Mou" },
+	{ TETRA_SDS_PROTO_EADS2, "EADS Secure Networks Oy" },
+	{ TETRA_SDS_PROTO_TETRAASS1, "Tetra Association" },
+	{ TETRA_SDS_PROTO_AIRWAVE1, "Airwave Solutions Ltd" },
+	{ TETRA_SDS_PROTO_AIRWAVE2, "Airwave Solutions Ltd" },
+	{ TETRA_SDS_PROTO_APD1, "APD Communications Ltd" },
+	{ TETRA_SDS_PROTO_SEPURA1, "Sepura Ltd" },
+	{ TETRA_SDS_PROTO_SEPURA2, "Sepura Ltd" },
+	{ TETRA_SDS_PROTO_RHEINMETALL2, "Rheinmetall defence GmbH" },
+	{ TETRA_SDS_PROTO_SEPURA3, "Sepura Ltd" },
+	{ TETRA_SDS_PROTO_MOTOROLA1, "Motorola A/s" },
+	{ TETRA_SDS_PROTO_MOTOROLA2, "Motorola A/s" },
+	{ TETRA_SDS_PROTO_MOTOROLA3, "Motorola A/s" },
+	{ TETRA_SDS_PROTO_MOTOROLA4, "Motorola A/s" },
+	{ TETRA_SDS_PROTO_MOTOROLA5, "Motorola A/s" },
+	{ TETRA_SDS_PROTO_TERRAFIX1, "TERRAFIX Ltd" },
+	{ TETRA_SDS_PROTO_TERRAFIX2, "TERRAFIX Ltd" },
+	{ TETRA_SDS_PROTO_TERRAFIX3, "TERRAFIX Ltd" },
+	{ TETRA_SDS_PROTO_MOTOROLA6, "Motorola A/s" },
+	{ TETRA_SDS_PROTO_SEPURA4, "Sepura Plc." },
+	{ TETRA_SDS_PROTO_3TC1, "3tc Software Ltd" },
+	{ TETRA_SDS_PROTO_3TC2, "3tc Software Ltd" },
+	{ TETRA_SDS_PROTO_MOTOROLA7, "Motorola A/s" },
+	{ TETRA_SDS_PROTO_THORCOM2, "Thorcom Systems Ltd." },
+	{ TETRA_SDS_PROTO_THALES3, "Thales UK LTD" },
 	{ 0x0,0 }
 };
 
@@ -95,22 +177,22 @@ int decode_pdu(char *dec,unsigned char *enc,int len);
 /*************   LIP   ****************/
 /* LIP direction  of travel */
 enum tetra_lip_dirtravelid {
-TETRA_LIP_DIRTRAVEL_N = 0 ,
-TETRA_LIP_DIRTRAVEL_NNE = 1 ,
-TETRA_LIP_DIRTRAVEL_NE = 2 ,
-TETRA_LIP_DIRTRAVEL_ENE = 3 ,
-TETRA_LIP_DIRTRAVEL_E = 4 ,
-TETRA_LIP_DIRTRAVEL_ESE = 5 ,
-TETRA_LIP_DIRTRAVEL_SE = 6 ,
-TETRA_LIP_DIRTRAVEL_SSE = 7 ,
-TETRA_LIP_DIRTRAVEL_S = 8 ,
-TETRA_LIP_DIRTRAVEL_SSW = 9 ,
-TETRA_LIP_DIRTRAVEL_SW = 10 ,
-TETRA_LIP_DIRTRAVEL_WSW = 11 ,
-TETRA_LIP_DIRTRAVEL_W = 12 ,
-TETRA_LIP_DIRTRAVEL_WNW = 13 ,
-TETRA_LIP_DIRTRAVEL_NW = 14 ,
-TETRA_LIP_DIRTRAVEL_NNW = 15 
+	TETRA_LIP_DIRTRAVEL_N = 0 ,
+	TETRA_LIP_DIRTRAVEL_NNE = 1 ,
+	TETRA_LIP_DIRTRAVEL_NE = 2 ,
+	TETRA_LIP_DIRTRAVEL_ENE = 3 ,
+	TETRA_LIP_DIRTRAVEL_E = 4 ,
+	TETRA_LIP_DIRTRAVEL_ESE = 5 ,
+	TETRA_LIP_DIRTRAVEL_SE = 6 ,
+	TETRA_LIP_DIRTRAVEL_SSE = 7 ,
+	TETRA_LIP_DIRTRAVEL_S = 8 ,
+	TETRA_LIP_DIRTRAVEL_SSW = 9 ,
+	TETRA_LIP_DIRTRAVEL_SW = 10 ,
+	TETRA_LIP_DIRTRAVEL_WSW = 11 ,
+	TETRA_LIP_DIRTRAVEL_W = 12 ,
+	TETRA_LIP_DIRTRAVEL_WNW = 13 ,
+	TETRA_LIP_DIRTRAVEL_NW = 14 ,
+	TETRA_LIP_DIRTRAVEL_NNW = 15 
 };
 struct lip_dirtravel_type {
 	uint8_t type;
