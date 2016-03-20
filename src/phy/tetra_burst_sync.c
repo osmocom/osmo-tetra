@@ -117,7 +117,7 @@ int tetra_burst_sync_in(struct tetra_rx_state *trs, uint8_t *bits, unsigned int 
 			printf("\n");
 
 			/* log the burst frames. useful for scanning etc --sq5bpf */
-			sprintf(tmpstr,"TETMON_begin FUNC:BURST TETMON_end");
+			sprintf(tmpstr,"TETMON_begin FUNC:BURST RX:%i TETMON_end",tetra_hack_rxid);
 			sendto(tetra_hack_live_socket, (char *)&tmpstr, 128, 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
 
 
