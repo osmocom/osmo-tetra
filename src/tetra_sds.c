@@ -292,7 +292,7 @@ unsigned int parse_d_sds_data(struct tetra_mac_state *tms, struct msgb *msg, uns
 			}
 
 			if (datalen>2047) {  
-				strcat(descr,"ERROR: SDS too short");
+				strcat(descr,"ERROR: SDS too long");
 				decode_sds=0; 
 			}
 
