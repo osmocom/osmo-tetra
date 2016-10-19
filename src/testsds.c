@@ -61,6 +61,8 @@
 
 extern int rx_tl_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len);
 
+extern int tetra_hack_all_sds_as_text;
+
 int char_to_ubits(char *c,unsigned char *out)
 {
 	int len=0;
@@ -127,6 +129,8 @@ int main(int argc,char **argv) {
 	len=char_to_ubits(argv[1],(char *)&buf);
 	msg.l1h=(unsigned char *)&buf1;
 	msg.l3h=(unsigned char *)&buf;
+
+	tetra_hack_all_sds_as_text=1;
 
 	show_ascii_strings((unsigned char *)&buf,len);
 

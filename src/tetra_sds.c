@@ -390,19 +390,14 @@ unsigned int parse_d_sds_data(struct tetra_mac_state *tms, struct msgb *msg, uns
 									l++;
 									datalen=datalen-m;
 								}
-								/* TODO: the first two bytes are often garbage. either parse it or skip it 
-								 * i guess i'll have to read the etsi specifications better --sq5bpf */
 
 								for(a=0;a<l;a++) {
 									if (isprint(udata[a])) {
 										sprintf(tmpstr,"%c",udata[a]);
-									}
-									else {
+									} else {
 										sprintf(tmpstr,"\\x%2.2X",udata[a]);
 									}
 									strcat(descr,tmpstr);
-
-
 								}
 								strcat(descr,"]");
 								break;
@@ -424,7 +419,11 @@ unsigned int parse_d_sds_data(struct tetra_mac_state *tms, struct msgb *msg, uns
 						}
 						/* dump */
 						for(a=0;a<l;a++) {
-							sprintf(tmpstr,"0x%2.2X ",udata[a]);
+							if ((tetra_hack_all_sds_as_text)&&(isprint(udata[a]))) {
+								sprintf(tmpstr,"%c",udata[a]);
+							} else {
+								sprintf(tmpstr,"\\x%2.2X",udata[a]);
+							}
 							strcat(descr,tmpstr);
 						}
 						strcat(descr,"]");
@@ -852,7 +851,7 @@ int decode_locsystem(char *out, int outlen,uint8_t *bits,int datalen)
 	uint8_t  rtcm_sthealth;
 	uint8_t rtcm_parity2;
 	buf[0]=0;
-/*	datalen=datalen-16; n=n+16;  skip the sds-tl 2-byte header, not needed now */
+	/*	datalen=datalen-16; n=n+16;  skip the sds-tl 2-byte header, not needed now */
 	m=8; locsystem_coding_scheme=bits_to_uint(bits+n, m); n=n+m; datalen=datalen-m;
 	switch (locsystem_coding_scheme) {
 		case 0: /* NMEA */
@@ -873,7 +872,7 @@ int decode_locsystem(char *out, int outlen,uint8_t *bits,int datalen)
 			//snprintf(out,outlen,"RTCM SC-104 (not implemented)  msgtype:%i stationid:%i parity:%i ",rtcm_msgtype,rtcm_stationid,rtcm_parity); outlen=outlen-30;
 
 			break;
-/* i've seen a type 0x80 proprietary message, but this something different from simple location system 0x80 */ 
+			/* i've seen a type 0x80 proprietary message, but this something different from simple location system 0x80 */ 
 		default: /* reserved */
 			snprintf(out,outlen,"proprietary coding scheme 0x%2.2x: ",locsystem_coding_scheme); outlen=outlen-33;
 

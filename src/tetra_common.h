@@ -73,6 +73,24 @@ uint16_t tetra_hack_la;
 uint8_t  tetra_hack_freq_band;
 uint8_t  tetra_hack_freq_offset;
 
+#define FRAGSLOT_MSGB_SIZE 8192
+#define FRAGSLOT_NR_SLOTS 5
+struct fragslot {
+	int active;
+	int fragtimer;	
+	struct msgb *msgb;
+	int length;
+	int fragments;
+	int encryption;
+};
+
+struct fragslot fragslots[FRAGSLOT_NR_SLOTS]; /* slots are 1-4 but sometimes  slot==0 */
+
+
+#define N203 6  /* see N.203 in the tetra docs, should be 4 or greater */
+
+int tetra_hack_reassemble_fragments;
+int tetra_hack_all_sds_as_text;
 
 /* end tetra hack --sq5bpf */
 
@@ -87,7 +105,7 @@ struct tetra_mac_state {
 	struct {
 		int is_traffic;
 	} cur_burst;
-    struct tetra_si_decoded last_sid;
+	struct tetra_si_decoded last_sid;
 };
 
 void tetra_mac_state_init(struct tetra_mac_state *tms);
@@ -96,7 +114,7 @@ void tetra_mac_state_init(struct tetra_mac_state *tms);
 
 uint32_t tetra_dl_carrier_hz(uint8_t band, uint16_t carrier, uint8_t offset);
 uint32_t tetra_ul_carrier_hz(uint8_t band, uint16_t carrier, uint8_t offset,
-			     uint8_t duplex, uint8_t reverse);
+		uint8_t duplex, uint8_t reverse);
 
 const char *tetra_get_lchan_name(enum tetra_log_chan lchan);
 const char *tetra_get_sap_name(uint8_t sap);

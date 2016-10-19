@@ -56,6 +56,8 @@ ulimit -c unlimited
 #demod/${GR_DIR}/simdemod2.py -o /dev/stdout -i $FIFO | ./float_to_bits /dev/stdin /dev/stdout | ./tetra-rx /dev/stdin 
 
 #tetra-rx args: -a turns on pseudo-afc , -i uses an internal float_t_bits
+# -r turns on fragment reassembly, -s tries to dump unknown SDS protocols as text
+#
 #if you have problems with the receiver, then try to remove -a
 demod/${GR_DIR}/simdemod2.py -o /dev/stdout -i $FIFO | ./tetra-rx -a -i /dev/stdin 
 

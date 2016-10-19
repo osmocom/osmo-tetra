@@ -151,7 +151,8 @@ int rx_tm_sdu(struct msgb *msg, unsigned int len)
 
 	if (lpp.tl_sdu && lpp.ss == 0) {
 		/* this resembles TMA-UNITDATA.ind */
-		//rx_tl_sdu(msg, lpp.tl_sdu_len);
+		//sq5bpf
+		rx_tl_sdu(msg, lpp.tl_sdu_len);
 	}
 	return len;
 }

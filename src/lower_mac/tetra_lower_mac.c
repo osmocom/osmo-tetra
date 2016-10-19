@@ -268,7 +268,6 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 		if (tms->cur_burst.is_traffic)
 		{
 			int16_t block[690];
-			FILE *f;
 			int i;
 
 

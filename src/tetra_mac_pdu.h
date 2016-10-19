@@ -1,6 +1,10 @@
 #ifndef TETRA_MAC_PDU
 #define TETRA_MAC_PDU
 
+#define MACPDU_LEN_2ND_STOLEN   -1
+#define MACPDU_LEN_START_FRAG   -2
+
+
 enum tetra_mac_pdu_types {
 	TETRA_PDU_T_MAC_RESOURCE = 0,
 	TETRA_PDU_T_MAC_FRAG_END = 1,

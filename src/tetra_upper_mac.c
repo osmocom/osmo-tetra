@@ -579,13 +579,149 @@ static int rx_tm_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int
 	return len;
 }
 
-static void rx_resrc(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms)
+/* add bits to a fragment. these should really be bit operations and not stuffing one bit per byte */
+void append_frag_bits(int slot,uint8_t *bits,int bitlen,int fillbits)
+{
+	int i=bitlen;
+	int l=fragslots[slot].length;
+	struct msgb *fragmsgb;
+	uint8_t bit;
+	int zeroes=0;
+
+	fragmsgb= fragslots[slot].msgb;
+
+	while(i) {
+		bit=bits_to_uint(bits, 1);
+		msgb_put_u8(fragmsgb,bit);
+		if (bit) { zeroes=0; } else { zeroes++; }
+		bits++;
+		i--;
+		l++;
+		if (l>4095) { printf("\nFRAG LENGTH ERROR!\n"); return; } /* limit hardcoded for now, the buffer allocated is twice the size just in case */
+	}
+
+	fragslots[slot].length=fragslots[slot].length+bitlen;
+
+	if (fillbits) {
+		fragslots[slot].length=fragslots[slot].length-zeroes;
+		msgb_get(fragmsgb,zeroes);
+	}
+
+	fragslots[slot].fragments++;
+	fragslots[slot].fragtimer=0;
+	/*
+	 * printf("\nappend_frag slot=%i len=%i totallen=%i fillbits=%i\n",slot,bitlen,fragslots[slot].length,fillbits);
+	 * printf("\nFRAGDUMP: %s\n",osmo_ubit_dump((unsigned char *)fragmsgb->l3h,msgb_l3len(fragmsgb)));
+	 */
+
+}
+
+/* MAC-FRAG PDU */
+static void rx_macfrag(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms,int slot)
+{
+	struct msgb *msg = tmvp->oph.msg;
+	struct tetra_resrc_decoded rsd;
+	uint8_t *bits = msg->l1h;
+	int n=0;
+	int m=0;
+
+	memset(&rsd, 0, sizeof(rsd));
+	m=2; uint8_t macpdu_type=bits_to_uint(bits+n, m); n=n+m; /*  MAC-FRAG/END */
+	m=1; uint8_t macpdu_subtype=bits_to_uint(bits+n, m); n=n+m; /* 0 - MAC-FRAG */
+	m=1; uint8_t fillbits_present=bits_to_uint(bits+n, m); n=n+m;
+	int len=msgb_l1len(msg) - n;
+
+	if (fragslots[slot].active) {
+		append_frag_bits(slot,bits+n,len,fillbits_present);
+	} else {
+		printf("\nFRAG: got fragment without start packet for slot=%i\n",slot);
+	}
+}
+
+/* 21.4.3.3 MAC-END PDU page 618 */
+static void rx_macend(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms,int slot)
 {
 	struct msgb *msg = tmvp->oph.msg;
 	struct tetra_resrc_decoded rsd;
 	int tmpdu_offset;
+	uint8_t *bits = msg->l1h;
+	struct msgb *fragmsgb;
+	int n=0;
+	int m=0;
+
+	memset(&rsd, 0, sizeof(rsd));
+
+	m=2; uint8_t macpdu_type=bits_to_uint(bits+n, m); n=n+m;
+	m=1; uint8_t macpdu_subtype=bits_to_uint(bits+n, m); n=n+m;
+	m=1; uint8_t fillbits_present=bits_to_uint(bits+n, m); n=n+m;
+	m=6; uint8_t length_indicator=bits_to_uint(bits+n, m); n=n+m;
+	/* FIXME: we should really look at the modulation and handle d8psk and qam */
+	/* m=1; uint8_t napping=bits_to_uint(bits+n, m); n=n+m; // only  in d8psk  and qam */
+	m=1; uint8_t slot_granting=bits_to_uint(bits+n, m); n=n+m;
+	if (slot_granting) {
+		/* m=1; uint8_t multiple=bits_to_uint(bits+n, m); n=n+m; // only  in  qam */
+		m=8; /* basic slot granting */ n=n+m;
+		/* multiple slot granting in qam */
+
+	}
+	m=1; uint8_t chanalloc=bits_to_uint(bits+n, m); n=n+m;
+
+	if (chanalloc) {
+		m=decode_chan_alloc(&rsd.cad, bits+n); n=n+m;
+
+	}
+	int len=msgb_l1len(msg) - n;
+
+	fragmsgb=fragslots[slot].msgb;
+
+	fragslots[slot].fragments++;
+	if (fragslots[slot].active) {
+		append_frag_bits(slot,bits+n,len,fillbits_present);
+
+
+		/* for now filter out just SDS messages to hide the fact that the fragment stuff doesn't work 100% correctly :) */
+		uint8_t *b = fragmsgb->l3h;
+		uint8_t mle_pdisc = bits_to_uint(b, 3);
+		uint8_t proto=bits_to_uint(b+3, 5);
+
+		if ((mle_pdisc==TMLE_PDISC_CMCE)&&(proto==TCMCE_PDU_T_D_SDS_DATA)) {
+			printf("\nFRAGMENT DECODE fragments=%i len=%i slot=%i Encr=%i ",fragslots[slot].fragments,fragslots[slot].length,slot,fragslots[slot].encryption);
+			fflush(stdout); /* TODO: remove this in the future, for now leave it so that the printf() is shown if rx_tl_sdu segfaults for somee reason */
+			rx_tl_sdu(tms, fragmsgb, fragslots[slot].length);
+		}
+	}
+	else 
+	{
+		printf("\nFRAG: got end frag without start packet for slot=%i\n",slot);
+	}
+	msgb_reset(fragmsgb);
+	fragslots[slot].fragments=0;
+	fragslots[slot].active=0;
+	fragslots[slot].length=0;
+	fragslots[slot].fragtimer=0;
+}
+
+void hexdump(unsigned char *c,int i)
+{
+	printf("\nHEXDUMP_%i: [",i);
+	while (i) {
+		printf("%2.2x ",(unsigned char)*c);
+		c++;
+		i--;
+		fflush(stdout);
+	}
+	printf ("]\n");
+}
+
+
+static void rx_resrc(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms, int slot)
+{
+	struct msgb *msg = tmvp->oph.msg;
+	struct tetra_resrc_decoded rsd;
+	int tmpdu_offset;
+	struct msgb *fragmsgb;
+	int tmplen;
 	char tmpstr[1380];
-	time_t tp=time(0);
 
 	memset(&rsd, 0, sizeof(rsd));
 	tmpdu_offset = macpdu_decode_resource(&rsd, msg->l1h);
@@ -603,11 +739,62 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 		printf("SlotGrant=%u/%u ", rsd.slot_granting.nr_slots,
 				rsd.slot_granting.delay);
 
-	if (rsd.macpdu_length > 0 && rsd.encryption_mode == 0) {
+	if (rsd.encryption_mode == 0) {
 		int len_bits = rsd.macpdu_length*8;
 		if (msg->l2h + len_bits > msg->l1h + msgb_l1len(msg))
 			len_bits = msgb_l1len(msg) - tmpdu_offset;
-		rx_tm_sdu(tms, msg, len_bits);
+		if (rsd.macpdu_length>0) {
+			rx_tm_sdu(tms, msg, len_bits);
+		} 
+		else 
+		{
+			if ((tetra_hack_reassemble_fragments)&&(rsd.macpdu_length==MACPDU_LEN_START_FRAG)) {
+				int len=msgb_l1len(msg) - tmpdu_offset;
+
+				if (fragslots[slot].active) printf("\nWARNING: leftover fragment slot\n");
+
+				fragmsgb=fragslots[slot].msgb;
+
+				/* printf ("\nFRAGMENT START slot=%i msgb=%p\n",slot,fragmsgb); */
+				msgb_reset(fragmsgb);
+
+				fragslots[slot].active=1;
+				fragslots[slot].fragments=0;
+				/* copy the original msgb */
+				tmplen=msg->tail - msg->data;
+				memcpy(msgb_put(fragmsgb,tmplen),msg->data, tmplen);
+				if (msg->l1h) {
+					fragmsgb->l1h=((void *)msg->l1h-(void *)msg)+(void *)fragmsgb;
+				} else {
+					fragmsgb->l1h=0;
+				}
+				if (msg->l2h) {
+					fragmsgb->l2h=((void *)msg->l2h-(void *)msg)+(void *)fragmsgb;
+				} else {
+					fragmsgb->l2h=0;
+				}
+
+				struct tetra_llc_pdu lpp;
+
+				memset(&lpp, 0, sizeof(lpp));
+				tetra_llc_pdu_parse(&lpp,  (uint8_t *)fragmsgb->l2h,  msgb_l2len(fragmsgb));
+
+				if (lpp.tl_sdu && lpp.ss == 0) {
+					fragmsgb->l3h = lpp.tl_sdu;
+				} else {
+					fragmsgb->l3h = 0;
+				}
+				fragslots[slot].length=lpp.tl_sdu_len; /* not sure if this is the correct way to get the accurate length */
+
+				fragslots[slot].encryption=rsd.encryption_mode;
+
+				fragslots[slot].active=1;
+				fragslots[slot].fragments=1;
+
+				return;
+			}
+
+		}
 	}
 out:
 
@@ -618,7 +805,6 @@ out:
 		uint8_t mle_pdisc=0;
 		uint8_t	req_type=0;
 		uint16_t callident=0;
-		int i;
 
 
 		if (bits) {
@@ -714,6 +900,7 @@ static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_
 	uint8_t pdu_type = bits_to_uint(msg->l1h, 2);
 	const char *pdu_name;
 	struct msgb *gsmtap_msg;
+	uint8_t pdu_frag_subtype;
 
 	if (tup->lchan == TETRA_LC_BSCH)
 		pdu_name = "SYNC";
@@ -739,6 +926,27 @@ static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_
 	if (gsmtap_msg)
 		tetra_gsmtap_sendmsg(gsmtap_msg);
 
+	int slot=tup->tdma_time.tn;
+
+	/* age out old fragments */
+	if ((tetra_hack_reassemble_fragments)&&(tup->tdma_time.fn==18)) {
+		int i;
+		for (i=0;i<FRAGSLOT_NR_SLOTS;i++) {
+			if (fragslots[i].active) {
+				fragslots[i].fragtimer++;
+				if (fragslots[i].fragtimer>N203) {
+					printf("\nFRAG: aged out old fragments for slot=%i fragments=%i length=%i timer=%i\n",i,fragslots[i].fragments,fragslots[i].length, fragslots[i].fragtimer);
+					msgb_reset(fragslots[i].msgb);
+					fragslots[i].fragments=0;
+					fragslots[i].active=0;
+					fragslots[i].length=0;
+					fragslots[i].fragtimer=0;
+				}
+
+			}
+		}
+	}
+
 	switch (tup->lchan) {
 		case TETRA_LC_AACH:
 			rx_aach(tmvp, tms);
@@ -751,19 +959,26 @@ static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_
 					rx_bcast(tmvp, tms);
 					break;
 				case TETRA_PDU_T_MAC_RESOURCE:
-					rx_resrc(tmvp, tms);
+					rx_resrc(tmvp, tms, slot);
 					break;
 				case TETRA_PDU_T_MAC_SUPPL:
 					rx_suppl(tmvp, tms);
 					break;
 				case TETRA_PDU_T_MAC_FRAG_END:
+					pdu_frag_subtype = bits_to_uint(msg->l1h+2, 1);
+
 					if (msg->l1h[3] == TETRA_MAC_FRAGE_FRAG) {
 						printf("FRAG/END FRAG: ");
 						msg->l2h = msg->l1h+4;
-						rx_tm_sdu(tms, msg, 100 /*FIXME*/);
+						if (tetra_hack_reassemble_fragments) {
+							rx_macfrag(tmvp, tms,slot);
+						} else {
+							rx_tm_sdu(tms, msg, 100 /*FIXME*/);
+						}
 						printf("\n");
 					} else
 						printf("FRAG/END END\n");
+					if (tetra_hack_reassemble_fragments) rx_macend(tmvp, tms,slot);
 					break;
 				default:
 					printf("STRANGE pdu=%u\n", pdu_type);

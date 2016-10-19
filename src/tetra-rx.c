@@ -96,6 +96,7 @@ void show_help(char *prog)
 {
 	fprintf(stderr, "Usage: %s <-i> <-h> <-f filter_constant> <-a> <file_with_1_byte_per_bit or file_with_floats>\n", prog);
 	fprintf(stderr, "-h - show help\n-i accept float values (internal float_to_bits)\n\n-a turn on pseudo-afc (works only with -i)\n-f pseudo-afc averaging filter constant (default 0.0001)\n");
+	fprintf(stderr, "-s try to display unknown SDS types as text\n-r try to reassemble fragmented PDUs\n");
 
 }
 
@@ -113,7 +114,12 @@ int main(int argc, char **argv)
 	float filter_goal=0;
 	int ccounter=0;
 	char tmpstr2[64];
-	while ((opt = getopt(argc, argv, "ihf:F:a")) != -1) {
+
+	tetra_hack_reassemble_fragments=0;
+	tetra_hack_all_sds_as_text=0;
+
+
+	while ((opt = getopt(argc, argv, "ihf:F:ars")) != -1) {
 
 		switch (opt) {
 			case 'i':
@@ -127,6 +133,12 @@ int main(int argc, char **argv)
 				break;
 			case 'F':
 				filter_goal=atof(optarg);
+				break;
+			case 'r':
+				tetra_hack_reassemble_fragments=1;
+				break;
+			case 's':
+				tetra_hack_all_sds_as_text=1;
 				break;
 			case 'h':
 				show_help(argv[0]);
@@ -182,6 +194,20 @@ int main(int argc, char **argv)
 
 	trs = talloc_zero(tetra_tall_ctx, struct tetra_rx_state);
 	trs->burst_cb_priv = tms;
+
+	/* init the fragment buffers */
+	int k;
+	char desc[]="slot \0";
+	memset((void *)&fragslots,0,sizeof(struct fragslot)*FRAGSLOT_NR_SLOTS); /* clean just in case, shouldn't be needed */
+	for (k=0;k<FRAGSLOT_NR_SLOTS;k++) {
+		desc[4]='0'+k;
+		fragslots[k].msgb=msgb_alloc(8192, desc);
+		/* no idea why this is needed here, but if it's not called early enough, then i get segfaults */
+		msgb_reset(fragslots[k].msgb);
+	}
+
+
+
 #define BUFLEN 64
 #define MAXVAL 5.0
 
@@ -201,7 +227,7 @@ int main(int argc, char **argv)
 				break;
 			rc2=rc/sizeof(float);
 			for(i=0;i<rc2;i++) {	
-				
+
 				if ((fl[i]>-MAXVAL)&&(fl[i]<MAXVAL)) 
 					filter=filter*(1.0-filter_val)+(fl[i]-filter_goal)*filter_val;
 				if (do_afc) {

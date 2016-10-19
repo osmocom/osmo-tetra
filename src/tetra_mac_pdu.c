@@ -91,7 +91,7 @@ static const uint8_t addr_len_by_type[] = {
 };
 
 /* 21.5.2 */
-static int decode_chan_alloc(struct tetra_chan_alloc_decoded *cad, const uint8_t *bits)
+int decode_chan_alloc(struct tetra_chan_alloc_decoded *cad, const uint8_t *bits)
 {
 	const uint8_t *cur = bits;
 
