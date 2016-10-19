@@ -33,6 +33,8 @@
 
 #include <osmocom/core/utils.h>
 #include <osmocom/core/talloc.h>
+#include <osmocom/core/msgb.h>
+#include <osmocom/core/bits.h>
 
 #include "tetra_common.h"
 #include <phy/tetra_burst.h>
