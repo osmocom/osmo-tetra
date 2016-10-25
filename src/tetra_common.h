@@ -91,6 +91,7 @@ struct fragslot fragslots[FRAGSLOT_NR_SLOTS]; /* slots are 1-4 but sometimes  sl
 
 int tetra_hack_reassemble_fragments;
 int tetra_hack_all_sds_as_text;
+int tetra_hack_allow_encrypted;
 
 /* end tetra hack --sq5bpf */
 

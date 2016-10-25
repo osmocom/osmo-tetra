@@ -96,9 +96,10 @@ static void sym_int2bits(int sym, uint8_t *ret0,uint8_t *ret1)
 
 void show_help(char *prog)
 {
-	fprintf(stderr, "Usage: %s <-i> <-h> <-f filter_constant> <-a> <file_with_1_byte_per_bit or file_with_floats>\n", prog);
+	fprintf(stderr, "Usage: %s <-i> <-h> <-r> <-s> <-e> <-f filter_constant> <-a> <file_with_1_byte_per_bit or file_with_floats>\n", prog);
 	fprintf(stderr, "-h - show help\n-i accept float values (internal float_to_bits)\n\n-a turn on pseudo-afc (works only with -i)\n-f pseudo-afc averaging filter constant (default 0.0001)\n");
 	fprintf(stderr, "-s try to display unknown SDS types as text\n-r try to reassemble fragmented PDUs\n");
+	fprintf(stderr, "-e allow parsing of encrypted packets (note: this will return gibberish, because they are ENCRYPTED, it won't break any encryption etc)\n");
 
 }
 
@@ -119,9 +120,10 @@ int main(int argc, char **argv)
 
 	tetra_hack_reassemble_fragments=0;
 	tetra_hack_all_sds_as_text=0;
+	tetra_hack_allow_encrypted=0;
 
 
-	while ((opt = getopt(argc, argv, "ihf:F:ars")) != -1) {
+	while ((opt = getopt(argc, argv, "ihf:F:arse")) != -1) {
 
 		switch (opt) {
 			case 'i':
@@ -141,6 +143,9 @@ int main(int argc, char **argv)
 				break;
 			case 's':
 				tetra_hack_all_sds_as_text=1;
+				break;
+			case 'e':
+				tetra_hack_allow_encrypted=1;
 				break;
 			case 'h':
 				show_help(argv[0]);
@@ -200,6 +205,7 @@ int main(int argc, char **argv)
 	/* init the fragment buffers */
 	int k;
 	char desc[]="slot \0";
+
 	memset((void *)&fragslots,0,sizeof(struct fragslot)*FRAGSLOT_NR_SLOTS); /* clean just in case, shouldn't be needed */
 	for (k=0;k<FRAGSLOT_NR_SLOTS;k++) {
 		desc[4]='0'+k;

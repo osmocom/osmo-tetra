@@ -681,19 +681,25 @@ static void rx_macend(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tm
 
 		/* for now filter out just SDS messages to hide the fact that the fragment stuff doesn't work 100% correctly :) */
 		uint8_t *b = fragmsgb->l3h;
-		uint8_t mle_pdisc = bits_to_uint(b, 3);
-		uint8_t proto=bits_to_uint(b+3, 5);
 
-		if ((mle_pdisc==TMLE_PDISC_CMCE)&&(proto==TCMCE_PDU_T_D_SDS_DATA)) {
-			printf("\nFRAGMENT DECODE fragments=%i len=%i slot=%i Encr=%i ",fragslots[slot].fragments,fragslots[slot].length,slot,fragslots[slot].encryption);
-			fflush(stdout); /* TODO: remove this in the future, for now leave it so that the printf() is shown if rx_tl_sdu segfaults for somee reason */
-			rx_tl_sdu(tms, fragmsgb, fragslots[slot].length);
+		if (b) {
+			uint8_t mle_pdisc = bits_to_uint(b, 3);
+			uint8_t proto=bits_to_uint(b+3, 5);
+			if ((mle_pdisc==TMLE_PDISC_CMCE)&&(proto==TCMCE_PDU_T_D_SDS_DATA)) {
+				printf("\nFRAGMENT DECODE fragments=%i len=%i slot=%i Encr=%i ",fragslots[slot].fragments,fragslots[slot].length,slot,fragslots[slot].encryption);
+				fflush(stdout); /* TODO: remove this in the future, for now leave it so that the printf() is shown if rx_tl_sdu segfaults for somee reason */
+				rx_tl_sdu(tms, fragmsgb, fragslots[slot].length);
+			}
 		}
+		else 
+		{
+			printf("\nFRAG: got end frag without start packet for slot=%i\n",slot);
+		}
+	} else {
+		printf("\nFRAGMENT without l3 header dropped slot=%i\n",slot);
+
 	}
-	else 
-	{
-		printf("\nFRAG: got end frag without start packet for slot=%i\n",slot);
-	}
+
 	msgb_reset(fragmsgb);
 	fragslots[slot].fragments=0;
 	fragslots[slot].active=0;
@@ -739,7 +745,7 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 		printf("SlotGrant=%u/%u ", rsd.slot_granting.nr_slots,
 				rsd.slot_granting.delay);
 
-	if (rsd.encryption_mode == 0) {
+	if ((tetra_hack_allow_encrypted)||(rsd.encryption_mode == 0)) {
 		int len_bits = rsd.macpdu_length*8;
 		if (msg->l2h + len_bits > msg->l1h + msgb_l1len(msg))
 			len_bits = msgb_l1len(msg) - tmpdu_offset;
