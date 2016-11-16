@@ -291,6 +291,10 @@ uint parse_d_setup(struct tetra_mac_state *tms, struct msgb *msg, unsigned int l
 	char tmpstr2[1024];
 	struct tetra_resrc_decoded rsd;
 	int tmpdu_offset;
+	uint16_t notifindic=0;
+	uint32_t tempaddr=0;
+	uint16_t cpti=0;
+
 	memset(&rsd, 0, sizeof(rsd));
 	tmpdu_offset = macpdu_decode_resource(&rsd, msg->l1h);
 
@@ -307,33 +311,44 @@ uint parse_d_setup(struct tetra_mac_state *tms, struct msgb *msg, unsigned int l
 	m=2; uint16_t txgrant=bits_to_uint(bits+n, m); n=n+m;
 	m=1; uint16_t txperm=bits_to_uint(bits+n, m); n=n+m;
 	m=4; uint16_t callprio=bits_to_uint(bits+n, m); n=n+m;
-	m=6; uint16_t notifindic=bits_to_uint(bits+n, m); n=n+m;
-	m=24; uint32_t tempaddr=bits_to_uint(bits+n, m); n=n+m;
-	m=2; uint16_t cpti=bits_to_uint(bits+n, m); n=n+m;
-	switch(cpti)
+	m=1; uint8_t obit=bits_to_uint(bits+n, m); n=n+m;
+	if (obit) 
 	{
-		case 0: /* SNA */
-			m=8; callingssi=bits_to_uint(bits+n, m); n=n+m;
-			break;
-		case 1: /* SSI */
-			m=24; callingssi=bits_to_uint(bits+n, m); n=n+m;
-			break;
-		case 2: /* TETRA Subscriber Identity (TSI) */
-			m=24; callingssi=bits_to_uint(bits+n, m); n=n+m;
-			m=24; callingext=bits_to_uint(bits+n, m); n=n+m;
-			break;
-		case 3: /* reserved ? */
-			break;
+		m=1; uint8_t pbit_notifindic=bits_to_uint(bits+n, m); n=n+m;
+		if (pbit_notifindic) {
+			m=6;  notifindic=bits_to_uint(bits+n, m); n=n+m;
+		}
+		m=1; uint8_t pbit_tempaddr=bits_to_uint(bits+n, m); n=n+m;
+		if (pbit_tempaddr) {
+			m=24;  tempaddr=bits_to_uint(bits+n, m); n=n+m;
+		}
+		m=1; uint8_t pbit_cpti=bits_to_uint(bits+n, m); n=n+m;
+		if (pbit_cpti) {
+			m=2;  cpti=bits_to_uint(bits+n, m); n=n+m;
+			switch(cpti)
+			{
+				case 0: /* SNA */
+					m=8; callingssi=bits_to_uint(bits+n, m); n=n+m;
+					break;
+				case 1: /* SSI */
+					m=24; callingssi=bits_to_uint(bits+n, m); n=n+m;
+					break;
+				case 2: /* TETRA Subscriber Identity (TSI) */
+					m=24; callingssi=bits_to_uint(bits+n, m); n=n+m;
+					m=24; callingext=bits_to_uint(bits+n, m); n=n+m;
+					break;
+				case 3: /* reserved ? */
+					break;
+			}
+		}
+
 	}
-
-
 	printf ("\nCall identifier:%i  Call timeout:%i  Hookmethod:%i  Duplex:%i\n",callident,calltimeout,hookmethod,duplex);
 	printf("Basicinfo:0x%2.2X  Txgrant:%i  TXperm:%i  Callprio:%i\n",basicinfo,txgrant,txperm,callprio);
 	printf("NotificationID:%i  Tempaddr:%i CPTI:%i  CallingSSI:%i  CallingExt:%i\n",notifindic,tempaddr,cpti,callingssi,callingext);
 
-	sprintf(tmpstr2,"TETMON_begin FUNC:DSETUPDEC IDX:%i SSI:%i SSI2:%i CID:%i NID:%i RX:%i TETMON_end",rsd.addr.usage_marker,rsd.addr.ssi,tempaddr,callident,notifindic,tetra_hack_rxid);
+	sprintf(tmpstr2,"TETMON_begin FUNC:DSETUPDEC IDX:%i SSI:%i SSI2:%i CID:%i NID:%i RX:%i TETMON_end",rsd.addr.usage_marker,rsd.addr.ssi,callingssi,callident,notifindic,tetra_hack_rxid);
 	sendto(tetra_hack_live_socket, (char *)&tmpstr2, strlen((char *)&tmpstr2)+1, 0, (struct sockaddr *)&tetra_hack_live_sockaddr, tetra_hack_socklen);
-
 }
 
 /* decode 18.5.17 Neighbour cell information for CA */
