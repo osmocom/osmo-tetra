@@ -35,5 +35,5 @@ ulimit -c unlimited
 # -r turns on fragment reassembly, -s tries to dump unknown SDS protocols as text
 #
 #if you have problems with the receiver, then try to remove -a
-socat UDP-RECV:${UDP_PORT} STDOUT | demod/${GR_DIR}/simdemod2.py -o /dev/stdout -i /dev/stdin | ./tetra-rx -a -i /dev/stdin 
+socat UDP-RECV:${UDP_PORT} STDOUT | demod/${GR_DIR}/simdemod2.py -o /dev/stdout -i /dev/stdin | ./tetra-rx -a -r -s -i /dev/stdin 
 
