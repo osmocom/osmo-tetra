@@ -35,7 +35,7 @@ static void normalize_fn(struct tetra_tdma_time *tm)
 	uint32_t mn_delta;
 
 	if (tm->fn > 18) {
-		mn_delta = tm->fn/60;
+		mn_delta = tm->fn/18;
 		tm->fn = (tm->fn%18);
 		tm->mn += mn_delta;
 	}
