@@ -1,4 +1,6 @@
 makefile-cleanups.patch
 build_as_32bit.patch
+link_static.patch
 round_private.patch
 filename-case.patch
+log_stderr.patch
