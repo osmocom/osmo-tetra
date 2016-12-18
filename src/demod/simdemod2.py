@@ -12,7 +12,7 @@
 
 import sys
 import math
-from gnuradio import gr, gru, eng_notation, blks2, optfir
+from gnuradio import gr, gru, eng_notation, blocks
 from gnuradio.eng_option import eng_option
 from optparse import OptionParser
 import osmosdr
@@ -30,7 +30,7 @@ class top_block(gr.top_block):
 
     options = get_options()
     self.input_file=options.input_file
-    self.gr_file_source_0 = gr.file_source(gr.sizeof_gr_complex*1, self.input_file, True)
+    self.gr_file_source_0 = blocks.file_source(gr.sizeof_gr_complex*1, self.input_file, True)
 
     symbol_rate = 18000
     sps = 2 # output rate will be 36,000

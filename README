@@ -1,5 +1,5 @@
 TETRA MAC/PHY layer experimentation code
-(C) 2010-2011 by Harald Welte <laforge@gnumonks.org>
+(C) 2010-2016 by Harald Welte <laforge@gnumonks.org> and contributors
 ======================================================================
 
 This code aims to implement the sending and receiving part of the
@@ -19,12 +19,13 @@ You will need libosmocore (http://bb.osmocom.org/trac/wiki/libosmocore) to link.
 
 src/demod/python/cpsk.py
 	* contains a gnuradio based pi4/DQPSK demodulator, courtesy of KA1RBI
-src/demod/python/tetra-demod.py
+src/demod/python/osmosdr-tetra_demod_fft.py
+	* call demodulator on any source supported by gr-osmosdr
+          (uhd, fcd, hackrf, blaerf, etc.)
+src/demod/python/simdemod2.py
 	* call demodulator on a 'cfile' containing complex baseband samples
-src/demod/python/usrp1-tetra_demod.py
-	* use demodulator in realtime with a USRP1 SDR
-src/demod/python/usrp2-tetra_demod.py
-	* use demodulator in realtime with a USRP2 SDR
+src/demod/python/{uhd,fcdp}-tetra_demod.py
+	* use demodulator directly with UHd or FCDP hadware (no gr-osmosdr)
 
 The output of the demodulator is a file containing one float value for each symbol,
 containing the phase shift (in units of pi/4) relative to the previous symbol.

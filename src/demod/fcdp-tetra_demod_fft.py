@@ -2,7 +2,7 @@
 
 import sys
 import math
-from gnuradio import gr, gru, audio, eng_notation, blks2, optfir
+from gnuradio import gr, gru, audio, eng_notation, blocks, filter
 from gnuradio import audio
 from gnuradio.eng_option import eng_option
 from gnuradio.wxgui import stdgui2, fftsink2
@@ -28,7 +28,7 @@ class my_top_block(stdgui2.std_top_block):
 
 	self.asrc = audio.source(sample_rate, options.audio_device, True)
 
-	self.f2c = gr.float_to_complex(1)
+	self.f2c = blocks.float_to_complex(1)
 
 	self.connect((self.asrc, 1), (self.f2c, 1))
 	self.connect((self.asrc, 0), (self.f2c, 0))
@@ -39,9 +39,9 @@ class my_top_block(stdgui2.std_top_block):
         ntaps = 11 * sps
         new_sample_rate = symbol_rate * sps
 
-        channel_taps = gr.firdes.low_pass(1.0, sample_rate, options.low_pass, options.low_pass * 0.1, gr.firdes.WIN_HANN)
+        channel_taps = filter.firdes.low_pass(1.0, sample_rate, options.low_pass, options.low_pass * 0.1, filter.firdes.WIN_HANN)
 
-        FILTER = gr.freq_xlating_fir_filter_ccf(1, channel_taps, options.calibration, sample_rate)
+        FILTER = filter.freq_xlating_fir_filter_ccf(1, channel_taps, options.calibration, sample_rate)
 
         sys.stderr.write("sample rate: %d\n" %(sample_rate))
 
@@ -54,11 +54,11 @@ class my_top_block(stdgui2.std_top_block):
                                  log=options.log,
                                  verbose=options.verbose)
 
-        OUT = gr.file_sink(gr.sizeof_float, options.output_file)
+        OUT = blocks.file_sink(gr.sizeof_float, options.output_file)
 
         r = float(sample_rate) / float(new_sample_rate)
 
-        INTERPOLATOR = gr.fractional_interpolator_cc(0, r)
+        INTERPOLATOR = filter.fractional_interpolator_cc(0, r)
 
         self.connect(self.f2c, FILTER, INTERPOLATOR, DEMOD, OUT)
 
