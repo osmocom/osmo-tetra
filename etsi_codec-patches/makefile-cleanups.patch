@@ -7,7 +7,7 @@ Index: etsi/amr-code/makefile
  CC=gcc
  
 -CFLAGS	=	-g -I.
-+CFLAGS	=	-g -I. -Wall
++CFLAGS	=	-g -I. -Wall -O3
  
  SRCS1		=	ccoder.c	ccod_tet.c	init_params.c	sub_cc.c \
  			tetra_op.c
@@ -36,7 +36,7 @@ Index: etsi/c-code/makefile
 +CC=gcc
  
 -CFLAGS	=	-I.
-+CFLAGS	=	-I. -Wall
++CFLAGS	=	-I. -Wall -O3
  
  SRCS1		=	scoder.c		scod_tet.c		sub_sc_d.c \
  			sub_dsp.c		fbas_tet.c		fexp_tet.c \
