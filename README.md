@@ -13,7 +13,50 @@ type-1 bits) and the bits that go to the DQPSK-modulator (type-5 bits).
 It is most useful to look at Figure 8.5, 8.6, 9.3 and 19.12 in conjunction
 with this program.
 
-You will need libosmocore (http://bb.osmocom.org/trac/wiki/libosmocore) to link.
+You will need
+[libosmocore](https://osmocom.org/projects/libosmocore/wiki/Libosmocore)
+to build this softwar
+
+Homepage
+--------
+
+The official homepage of the project is
+https://osmocom.org/projects/tetra/wiki/OsmocomTETRA
+
+GIT Repository
+--------------
+
+You can clone from the official osmo-tetra.git repository using
+
+	git clone git://git.osmocom.org/osmo-tetra.git
+
+There is a cgit interface at http://git.osmocom.org/osmo-tetra/
+
+Mailing List
+------------
+
+Discussions related to osmo-tetra are happening on the
+tetra@lists.osmocom.org mailing list, please see
+https://lists.osmocom.org/mailman/listinfo/tetra for subscription
+options and the list archive.
+
+Please observe the [Osmocom Mailing List
+Rules](https://osmocom.org/projects/cellular-infrastructure/wiki/Mailing_List_Rules)
+when posting.
+
+Contributing
+------------
+
+Our coding standards are described at
+https://osmocom.org/projects/cellular-infrastructure/wiki/Coding_standards
+
+We us a gerrit based patch submission/review process for managing
+contributions.  Please see
+https://osmocom.org/projects/cellular-infrastructure/wiki/Gerrit for
+more details
+
+The current patch queue for osmo-tetra can be seen at
+https://gerrit.osmocom.org/#/q/project:osmo-tetra+status:open
 
 
 Demodulator
