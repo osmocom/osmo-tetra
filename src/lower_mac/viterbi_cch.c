@@ -52,6 +52,7 @@ static const struct osmo_conv_code conv_cch = {
 	.K = 5,
 	.next_output = conv_cch_next_output,
 	.next_state  = conv_cch_next_state,
+	.term = CONV_TERM_TRUNCATION,
 };
 
 
