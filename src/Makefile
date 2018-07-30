@@ -1,7 +1,11 @@
-CFLAGS=-g -O0 -Wall `pkg-config --cflags libosmocore 2> /dev/null` -I.
+CFLAGS=-g -O3 -Wall `pkg-config --cflags libosmocore 2> /dev/null` -I.
 LDLIBS=`pkg-config --libs libosmocore 2> /dev/null` -losmocore
 
 all: conv_enc_test crc_test tetra-rx float_to_bits tunctl
+
+debug: CFLAGS := -lasan $(CFLAGS) -fsanitize=address -fno-omit-frame-pointer -g -Og
+debug: LDLIBS := -lasan $(LDLIBS)
+debug: all
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $^ -o $@
