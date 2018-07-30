@@ -229,14 +229,16 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 		printf("MCC %s(%u) ", osmo_ubit_dump(type2+31, 10), bits_to_uint(type2+31, 10));
 		printf("MNC %s(%u)\n", osmo_ubit_dump(type2+41, 14), bits_to_uint(type2+41, 14));
 		/* obtain information from SYNC PDU */
-		tcd->colour_code = bits_to_uint(type2+4, 6);
-		tcd->time.tn = bits_to_uint(type2+10, 2);
-		tcd->time.fn = bits_to_uint(type2+12, 5);
-		tcd->time.mn = bits_to_uint(type2+17, 6);
-		tcd->mcc = bits_to_uint(type2+31, 10);
-		tcd->mnc = bits_to_uint(type2+41, 14);
-		/* compute the scrambling code for the current cell */
-		tcd->scramb_init = tetra_scramb_get_init(tcd->mcc, tcd->mnc, tcd->colour_code);
+		if (tup->crc_ok) {
+			tcd->colour_code = bits_to_uint(type2+4, 6);
+			tcd->time.tn = bits_to_uint(type2+10, 2);
+			tcd->time.fn = bits_to_uint(type2+12, 5);
+			tcd->time.mn = bits_to_uint(type2+17, 6);
+			tcd->mcc = bits_to_uint(type2+31, 10);
+			tcd->mnc = bits_to_uint(type2+41, 14);
+			/* compute the scrambling code for the current cell */
+			tcd->scramb_init = tetra_scramb_get_init(tcd->mcc, tcd->mnc, tcd->colour_code);
+		}
 		/* update the PHY layer time */
 		memcpy(&t_phy_state.time, &tcd->time, sizeof(t_phy_state.time));
 		tup->lchan = TETRA_LC_BSCH;
