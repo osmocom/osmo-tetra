@@ -181,6 +181,8 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 		rx_tm_sdu(tms, msg, len_bits);
 	}
 
+	tms->ssi = rsd.addr.ssi;
+
 out:
 	printf("\n");
 }
@@ -241,7 +243,7 @@ static void rx_aach(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms)
 
 	/* save the state whether the current burst is traffic or not */
 	if (aad.dl_usage > 3)
-		tms->cur_burst.is_traffic = 1;
+		tms->cur_burst.is_traffic = aad.dl_usage;
 	else
 		tms->cur_burst.is_traffic = 0;
 
@@ -276,7 +278,7 @@ static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_
 	gsmtap_msg = tetra_gsmtap_makemsg(&tup->tdma_time, tup->lchan,
 					  tup->tdma_time.tn,
 					  /* FIXME: */ 0, 0, 0,
-					msg->l1h, msgb_l1len(msg));
+					msg->l1h, msgb_l1len(msg), tms);
 	if (gsmtap_msg)
 		tetra_gsmtap_sendmsg(gsmtap_msg);
 

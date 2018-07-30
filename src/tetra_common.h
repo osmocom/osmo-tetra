@@ -47,7 +47,11 @@ struct tetra_mac_state {
 	struct {
 		int is_traffic;
 	} cur_burst;
-    struct tetra_si_decoded last_sid;
+	struct tetra_si_decoded last_sid;
+
+	char *dumpdir;	/* Where to save traffic channel dump */
+	int ssi;	/* SSI */
+	int tsn;	/* Timeslon number */
 };
 
 void tetra_mac_state_init(struct tetra_mac_state *tms);

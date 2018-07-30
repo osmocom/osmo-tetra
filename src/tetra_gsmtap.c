@@ -28,9 +28,9 @@ static const uint8_t lchan2gsmtap[] = {
 };
 
 
-struct msgb *tetra_gsmtap_makemsg(struct tetra_tdma_time *tm, enum tetra_log_chan lchan,
-				  uint8_t ts, uint8_t ss, int8_t signal_dbm,
-				  uint8_t snr, const ubit_t *bitdata, unsigned int bitlen)
+struct msgb *tetra_gsmtap_makemsg(struct tetra_tdma_time *tm, enum tetra_log_chan lchan, uint8_t ts, uint8_t ss,
+				  int8_t signal_dbm, uint8_t snr, const ubit_t *bitdata, unsigned int bitlen,
+				  struct tetra_mac_state *tms)
 {
 	struct msgb *msg;
 	struct gsmtap_hdr *gh;
@@ -47,6 +47,7 @@ struct msgb *tetra_gsmtap_makemsg(struct tetra_tdma_time *tm, enum tetra_log_cha
 	gh->hdr_len = sizeof(*gh)/4;
 	gh->type = GSMTAP_TYPE_TETRA_I1;
 	gh->timeslot = ts;
+	tms->tsn = ts;
 	gh->sub_slot = ss;
 	gh->snr_db = snr;
 	gh->signal_dbm = signal_dbm;

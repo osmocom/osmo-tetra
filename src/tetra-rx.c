@@ -39,27 +39,38 @@ void *tetra_tall_ctx;
 int main(int argc, char **argv)
 {
 	int fd;
+	int opt;
 	struct tetra_rx_state *trs;
 	struct tetra_mac_state *tms;
-
-	if (argc < 2) {
-		fprintf(stderr, "Usage: %s <file_with_1_byte_per_bit>\n", argv[0]);
-		exit(1);
-	}
-
-	fd = open(argv[1], O_RDONLY);
-	if (fd < 0) {
-		perror("open");
-		exit(2);
-	}
-
-	tetra_gsmtap_init("localhost", 0);
 
 	tms = talloc_zero(tetra_tall_ctx, struct tetra_mac_state);
 	tetra_mac_state_init(tms);
 
 	trs = talloc_zero(tetra_tall_ctx, struct tetra_rx_state);
 	trs->burst_cb_priv = tms;
+
+	while ((opt = getopt(argc, argv, "d:")) != -1) {
+		switch (opt) {
+		case 'd':
+			tms->dumpdir = strdup(optarg);
+			break;
+		default:
+			fprintf(stderr, "Unknown option %c\n", opt);
+		}
+	}
+
+	if (argc <= optind) {
+		fprintf(stderr, "Usage: %s [-d DUMPDIR] <file_with_1_byte_per_bit>\n", argv[0]);
+		exit(1);
+	}
+
+	fd = open(argv[optind], O_RDONLY);
+	if (fd < 0) {
+		perror("open");
+		exit(2);
+	}
+
+	tetra_gsmtap_init("localhost", 0);
 
 	while (1) {
 		uint8_t buf[64];
@@ -76,6 +87,7 @@ int main(int argc, char **argv)
 		tetra_burst_sync_in(trs, buf, len);
 	}
 
+	free(tms->dumpdir);
 	talloc_free(trs);
 	talloc_free(tms);
 
