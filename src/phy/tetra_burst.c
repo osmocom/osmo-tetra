@@ -269,9 +269,39 @@ int build_norm_c_d_burst(uint8_t *buf, const uint8_t *bkn1, const uint8_t *bb, c
 int tetra_find_train_seq(const uint8_t *in, unsigned int end_of_in,
 			 uint32_t mask_of_train_seq, unsigned int *offset)
 {
+	static uint32_t tsq_bytes[5];
+
+	if (tsq_bytes[0] == 0) {
+#define FILTER_LOOKAHEAD_LEN 22
+#define FILTER_LOOKAHEAD_MASK ((1<<FILTER_LOOKAHEAD_LEN)-1)
+		for (int i = 0; i < FILTER_LOOKAHEAD_LEN; i++) {
+			tsq_bytes[0] = (tsq_bytes[0] << 1) | y_bits[i];
+			tsq_bytes[1] = (tsq_bytes[1] << 1) | n_bits[i];
+			tsq_bytes[2] = (tsq_bytes[2] << 1) | p_bits[i];
+			tsq_bytes[3] = (tsq_bytes[3] << 1) | q_bits[i];
+			tsq_bytes[4] = (tsq_bytes[4] << 1) | x_bits[i];
+		}
+	}
+
+	uint32_t filter = 0;
+
+	for (int i = 0; i < FILTER_LOOKAHEAD_LEN-2; i++)
+		filter = (filter << 1) | in[i];
+
 	const uint8_t *cur;
 
 	for (cur = in; cur < in + end_of_in; cur++) {
+		filter = ((filter << 1) | cur[FILTER_LOOKAHEAD_LEN-1]) & FILTER_LOOKAHEAD_MASK;
+
+		int match = 0;
+
+		for (int i = 0; i < 5; i++)
+			if (filter == tsq_bytes[i])
+				match = 1;
+
+		if (!match)
+			continue;
+
 		int remain_len = (in + end_of_in) - cur;
 
 		if (mask_of_train_seq & (1 << TETRA_TRAIN_SYNC) &&
