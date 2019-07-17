@@ -151,7 +151,7 @@ class cqpsk_mod(gr.hier_block2):
         Adds QPSK modulation-specific options to the standard parser
         """
         parser.add_option("", "--excess-bw", type="float", default=_def_excess_bw,
-                          help="set RRC excess bandwith factor [default=%default] (PSK)")
+                          help="set RRC excess bandwidth factor [default=%default] (PSK)")
         parser.add_option("", "--no-gray-code", dest="gray_code",
                           action="store_false", default=_def_gray_code,
                           help="disable gray coding on modulated bits (PSK)")
@@ -325,7 +325,7 @@ class cqpsk_demod(gr.hier_block2):
         Adds modulation-specific options to the standard parser
         """
         parser.add_option("", "--excess-bw", type="float", default=_def_excess_bw,
-                          help="set RRC excess bandwith factor [default=%default] (PSK)")
+                          help="set RRC excess bandwidth factor [default=%default] (PSK)")
         parser.add_option("", "--no-gray-code", dest="gray_code",
                           action="store_false", default=_def_gray_code,
                           help="disable gray coding on modulated bits (PSK)")

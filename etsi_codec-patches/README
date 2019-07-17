@@ -33,5 +33,5 @@ a8115fe68ef8f8cc466f4192572a1e3e
 Due to the use of uppercase file names in the zip file, you should use the "-L"
 flag to the unzip program, which ensures all files are completely lower-case.
 
-Please apply all of the patches foudn in this directory to the
+Please apply all of the patches found in this directory to the
 resulting source code.
