@@ -43,12 +43,12 @@ class top_block(grc_wxgui.top_block_gui):
     self.src.set_sample_rate(int(options.sample_rate))
 
     if self.rfgain is None:
-        self.src.set_gain_mode(1)
+        self.src.set_gain_mode(True)
         self.iagc = 1
         self.rfgain = 0
     else:
         self.iagc = 0
-        self.src.set_gain_mode(0)
+        self.src.set_gain_mode(False)
         self.src.set_gain(self.rfgain)
 
     # may differ from the requested rate
@@ -117,7 +117,7 @@ class top_block(grc_wxgui.top_block_gui):
     def set_iagc(iagc):
         self.iagc = iagc
         self._agc_check_box.set_value(self.iagc)
-        self.src.set_gain_mode(self.iagc, 0)
+        self.src.set_gain_mode(bool(self.iagc))
         self.src.set_gain(0 if self.iagc == 1 else self.rfgain, 0)
 
     self._agc_check_box = forms.check_box(
