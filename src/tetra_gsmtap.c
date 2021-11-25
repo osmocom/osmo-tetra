@@ -64,10 +64,16 @@ struct msgb *tetra_gsmtap_makemsg(struct tetra_tdma_time *tm, enum tetra_log_cha
 
 int tetra_gsmtap_sendmsg(struct msgb *msg)
 {
-	if (g_gti)
-		return gsmtap_sendmsg(g_gti, msg);
-	else
-		return 0;
+	int rc;
+
+	if (g_gti) {
+		rc = gsmtap_sendmsg_free(g_gti, msg);
+	} else {
+		msgb_free(msg);
+		rc = 0;
+	}
+
+	return rc;
 }
 
 int tetra_gsmtap_init(const char *host, uint16_t port)
