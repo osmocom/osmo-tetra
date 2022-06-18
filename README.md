@@ -28,9 +28,9 @@ GIT Repository
 
 You can clone from the official osmo-tetra.git repository using
 
-	git clone git://git.osmocom.org/osmo-tetra.git
+	git clone https://gitea.osmocom.org/tetra/osmo-tetra
 
-There is a cgit interface at http://git.osmocom.org/osmo-tetra/
+There is a web interface at <https://gitea.osmocom.org/tetra/osmo-tetra>
 
 Mailing List
 ------------
