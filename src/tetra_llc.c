@@ -92,9 +92,10 @@ static int tllc_defrag_out(struct tllc_state *llcs,
 	msg->l3h = msg->data;
 	rx_tl_sdu(msg, msgb_l3len(msg));
 
-	if (tun_fd < 0)
+	if (tun_fd < 0) {
 		tun_fd = tun_alloc("tun0");
 		fprintf(stderr, "tun_fd=%d\n", tun_fd);
+	}
 	if (tun_fd >= 0) {
 		uint8_t buf[4096];
 		int len = osmo_ubit2pbit(buf, msg->l3h+3+4+4+4+4, msgb_l3len(msg)-3-4-4-4-4);
