@@ -28,6 +28,7 @@
 #include <osmocom/core/bits.h>
 
 #include "tetra_llc_pdu.h"
+#include "tuntap.h"
 
 static int tun_fd = -1;
 
