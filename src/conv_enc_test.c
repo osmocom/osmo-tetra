@@ -335,12 +335,12 @@ int main(int argc, char **argv)
 	srand(time(NULL));
 	for (i = 0; i < 100; i++) {
 		uint32_t r = rand();
-		osmo_pbit2ubit(pdu_sync, (uint8_t *) &r, 32);
-		osmo_pbit2ubit(pdu_sync+32, (uint8_t *)&r, 60-32);
+		osmo_store32le(r, pdu_sync);
+		osmo_store32le(r, pdu_sync + 4);
 		//build_sb();
 
-		osmo_pbit2ubit(pdu_schf, (uint8_t *) &r, 32);
-		osmo_pbit2ubit(pdu_schf+32, (uint8_t *)&r, 60-32);
+		osmo_store32le(r, pdu_schf);
+		osmo_store32le(r, pdu_schf + 4);
 		build_ndb_schf();
 	}
 #endif
