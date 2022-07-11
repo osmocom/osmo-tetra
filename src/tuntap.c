@@ -29,7 +29,7 @@ int tun_alloc(char *dev)
        */ 
       ifr.ifr_flags = IFF_TUN|IFF_NO_PI; 
       if( *dev )
-         strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+         snprintf(ifr.ifr_name, IFNAMSIZ, "%s", dev);
 
       if( (err = ioctl(fd, TUNSETIFF, (void *) &ifr)) < 0 ){
          close(fd);
