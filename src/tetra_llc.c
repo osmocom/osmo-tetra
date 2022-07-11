@@ -150,6 +150,12 @@ int rx_tm_sdu(struct msgb *msg, unsigned int len)
 		/* check if the fragment is complete and hand it off*/
 		tllc_defrag_out(&g_llcs, &lpp);
 		break;
+
+	case TLLC_PDUT_DEC_UNKNOWN:
+	case TLLC_PDUT_DEC_ALX_ACK:
+	case TLLC_PDUT_DEC_ALX_RNR:
+		/* fixme: unhandled types */
+		break;
 	}
 
 	if (lpp.tl_sdu && lpp.ss == 0) {

@@ -371,5 +371,9 @@ void tetra_burst_rx_cb(const uint8_t *burst, unsigned int len, enum tetra_train_
 		tp_sap_udata_ind(TPSAP_T_BBK, bbk_buf, NDB_BBK_BITS, priv);
 		tp_sap_udata_ind(TPSAP_T_SCH_F, ndbf_buf, 2*NDB_BLK_BITS, priv);
 		break;
+	case TETRA_TRAIN_NORM_3:
+	case TETRA_TRAIN_EXT:
+		/* uplink training sequences, should not be encountered, ignore */
+		break;
 	}
 }
