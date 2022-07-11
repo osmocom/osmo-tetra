@@ -105,6 +105,7 @@ static int tllc_defrag_out(struct tllc_state *llcs,
 	llist_del(&dqe->list);
 	talloc_free(msg);
 	talloc_free(dqe);
+	return 0;
 }
 
 /* Receive TM-SDU (MAC SDU == LLC PDU) */
