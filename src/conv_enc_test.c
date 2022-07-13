@@ -306,8 +306,7 @@ int build_sb()
 
 int main(int argc, char **argv)
 {
-	int err, i;
-	uint16_t out;
+	int i;
 	uint32_t ret;
 
 	/* first: run some subsystem tests */
@@ -317,6 +316,8 @@ int main(int argc, char **argv)
 
 	tetra_rm3014_init();
 #if 0
+	int err;
+	uint16_t out;
 	ret = tetra_rm3014_compute(0x1001);
 	printf("RM3014: 0x%08x\n", ret);
 
