@@ -91,7 +91,7 @@ static const uint8_t addr_len_by_type[] = {
 };
 
 /* 21.5.2 */
-static int decode_chan_alloc(struct tetra_chan_alloc_decoded *cad, const uint8_t *bits)
+static int macpdu_decode_chan_alloc(struct tetra_chan_alloc_decoded *cad, const uint8_t *bits)
 {
 	const uint8_t *cur = bits;
 
@@ -182,12 +182,15 @@ static int decode_length(unsigned int length_ind)
 		return -EINVAL;
 }
 
-/* Section 21.4.3.1 MAC-RESOURCE */
-int macpdu_decode_resource(struct tetra_resrc_decoded *rsd, const uint8_t *bits)
-{
-	const uint8_t *cur = bits + 4;
 
+/* Section 21.4.3.1 MAC-RESOURCE */
+int macpdu_decode_resource(struct tetra_resrc_decoded *rsd, const uint8_t *bits, uint8_t is_decrypted)
+{
+	const uint8_t *cur = bits + 2;
+	rsd->fill_bits = bits_to_uint(cur, 1); cur += 1;
+	rsd->grant_position = bits_to_uint(cur, 1); cur += 1;
 	rsd->encryption_mode = bits_to_uint(cur, 2); cur += 2;
+	rsd->is_encrypted = rsd->encryption_mode > 0 && !is_decrypted;
 	rsd->rand_acc_flag = *cur++;
 	rsd->macpdu_length = decode_length(bits_to_uint(cur, 6)); cur += 6;
 	rsd->addr.type = bits_to_uint(cur, 3); cur += 3;
@@ -239,10 +242,10 @@ int macpdu_decode_resource(struct tetra_resrc_decoded *rsd, const uint8_t *bits)
 #endif
 	}
 	rsd->chan_alloc_pres = *cur++;
-	/* FIXME: If encryption is enabled, Channel Allocation is encrypted !!! */
-	if (rsd->chan_alloc_pres)
-		cur += decode_chan_alloc(&rsd->cad, cur);
-	/* FIXME: TM-SDU */
+
+	if (rsd->chan_alloc_pres && !rsd->is_encrypted)
+		// We can only determine length if the frame is unencrypted
+		cur += macpdu_decode_chan_alloc(&rsd->cad, cur);
 
 	return cur - bits;
 }

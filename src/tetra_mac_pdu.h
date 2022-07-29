@@ -213,7 +213,10 @@ struct tetra_addr {
 };
 
 struct tetra_resrc_decoded {
+	uint8_t fill_bits;
+	uint8_t grant_position;
 	uint8_t encryption_mode;
+	uint8_t is_encrypted;    // Set to 0 if not encrypted or decrypted successfully
 	uint8_t rand_acc_flag;
 	int macpdu_length;
 	struct tetra_addr addr;
@@ -229,7 +232,7 @@ struct tetra_resrc_decoded {
 	uint8_t chan_alloc_pres;
 	struct tetra_chan_alloc_decoded cad;
 };
-int macpdu_decode_resource(struct tetra_resrc_decoded *rsd, const uint8_t *bits);
+int macpdu_decode_resource(struct tetra_resrc_decoded *rsd, const uint8_t *bits, uint8_t is_decrypted);
 
 const char *tetra_addr_dump(const struct tetra_addr *addr);
 

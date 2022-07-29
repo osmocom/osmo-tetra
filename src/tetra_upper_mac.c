@@ -157,7 +157,7 @@ static void rx_resrc(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms
 	int tmpdu_offset;
 
 	memset(&rsd, 0, sizeof(rsd));
-	tmpdu_offset = macpdu_decode_resource(&rsd, msg->l1h);
+	tmpdu_offset = macpdu_decode_resource(&rsd, msg->l1h, 0);
 	msg->l2h = msg->l1h + tmpdu_offset;
 
 	printf("RESOURCE Encr=%u, Length=%d Addr=%s ",
