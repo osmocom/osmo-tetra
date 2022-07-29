@@ -82,42 +82,98 @@ const char *tetra_get_llc_pdut_dec_name(enum tllc_pdut_dec pdut)
 	return get_value_string(pdut_dec_names, pdut);
 }
 
+static uint32_t tetra_llc_compute_fcs(const uint8_t *buf, int len)
+{
+	uint32_t crc = 0xFFFFFFFF;
+	if (len < 32) {
+		crc <<= (32 - len);
+	}
+
+	for (size_t i = 0; i < len; i++) {
+		uint8_t bit = (buf[i] ^ (crc >> 31)) & 1;
+		crc <<= 1;
+		if (bit) {
+			crc = crc ^ 0x04C11DB7;
+		}
+	}
+	return ~crc;
+}
+
+static int tetra_llc_check_fcs(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
+{
+	uint32_t computed_fcs = tetra_llc_compute_fcs(buf, len);
+	return lpp->fcs == computed_fcs;
+}
+
 int tetra_llc_pdu_parse(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
 {
 	uint8_t *cur = buf;
 	uint8_t pdu_type;
+	lpp->have_fcs = 0;
+	lpp->fcs = 0;
 
 	pdu_type = bits_to_uint(cur, 4);
 	cur += 4;
 
 	switch (pdu_type) {
-	case TLLC_PDUT_BL_ADATA_FCS:
-		/* FIXME */
-		len -= 32;
+
 	case TLLC_PDUT_BL_ADATA:
+	case TLLC_PDUT_BL_ADATA_FCS:
 		lpp->nr = *cur++;
 		lpp->ns = *cur++;
 		lpp->tl_sdu = cur;
 		lpp->tl_sdu_len = len - (cur - buf);
 		lpp->pdu_type = TLLC_PDUT_DEC_BL_ADATA;
+
+		if (pdu_type == TLLC_PDUT_BL_ADATA_FCS) {
+			if (lpp->tl_sdu_len < 32) {
+				printf("\nWARNING frame too small for FCS (%d)\n", lpp->tl_sdu_len);
+				return cur-buf;
+			}
+			lpp->tl_sdu_len -= 32;
+			lpp->have_fcs = 1;
+			lpp->fcs = bits_to_uint(buf + len - 32, 32);
+			lpp->fcs_invalid = !tetra_llc_check_fcs(lpp, cur, lpp->tl_sdu_len);
+		}
 		break;
-	case TLLC_PDUT_BL_DATA_FCS:
-		/* FIXME */
-		len -= 32;
+
 	case TLLC_PDUT_BL_DATA:
+	case TLLC_PDUT_BL_DATA_FCS:
 		lpp->ns = *cur++;
 		lpp->tl_sdu = cur;
 		lpp->tl_sdu_len = len - (cur - buf);
 		lpp->pdu_type = TLLC_PDUT_DEC_BL_DATA;
+
+		if (pdu_type == TLLC_PDUT_BL_DATA_FCS) {
+			if (lpp->tl_sdu_len < 32) {
+				printf("\nWARNING frame too small for FCS (%d)\n", lpp->tl_sdu_len);
+				return cur-buf;
+			}
+			lpp->tl_sdu_len -= 32;
+			lpp->have_fcs = 1;
+			lpp->fcs = bits_to_uint(buf + len - 32, 32);
+			lpp->fcs_invalid = !tetra_llc_check_fcs(lpp, cur, lpp->tl_sdu_len);
+		}
 		break;
-	case TLLC_PDUT_BL_UDATA_FCS:
-		/* FIXME */
-		len -= 32;
+
 	case TLLC_PDUT_BL_UDATA:
+	case TLLC_PDUT_BL_UDATA_FCS:
 		lpp->tl_sdu = cur;
 		lpp->tl_sdu_len = len - (cur - buf);
 		lpp->pdu_type = TLLC_PDUT_DEC_BL_UDATA;
+
+		if (pdu_type == TLLC_PDUT_BL_UDATA_FCS) {
+			if (lpp->tl_sdu_len < 32) {
+				printf("\nWARNING frame too small for FCS (%d)\n", lpp->tl_sdu_len);
+				return cur-buf;
+			}
+			lpp->tl_sdu_len -= 32;
+			lpp->have_fcs = 1;
+			lpp->fcs = bits_to_uint(buf + len - 32, 32);
+			lpp->fcs_invalid = !tetra_llc_check_fcs(lpp, cur, lpp->tl_sdu_len);
+		}
 		break;
+
 	case TLLC_PDUT_AL_DATA_FINAL:
 		if (*cur++) {
 			/* FINAL */
