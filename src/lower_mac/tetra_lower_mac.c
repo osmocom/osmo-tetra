@@ -53,7 +53,7 @@ struct tetra_blk_param {
 static const struct tetra_blk_param tetra_blk_param[] = {
 	[TPSAP_T_SB1] = {
 		.name		= "SB1",
-		.type345_bits 	= 120,
+		.type345_bits	= 120,
 		.type2_bits	= 80,
 		.type1_bits	= 60,
 		.interleave_a	= 11,
@@ -138,7 +138,7 @@ struct tetra_tmvsap_prim *tmvsap_prim_alloc(uint16_t prim, uint8_t op)
 }
 
 /* incoming TP-SAP UNITDATA.ind  from PHY into lower MAC */
-void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned int len, void *priv)
+void tp_sap_udata_ind(enum tp_sap_data_type type, int blk_num, const uint8_t *bits, unsigned int len, void *priv)
 {
 	/* various intermediary buffers */
 	uint8_t type4[512];
@@ -216,7 +216,6 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 
 		/* Write it */
 		fwrite(block, sizeof(int16_t), 690, f);
-
 		fclose(f);
 
 		/* Write used ssi */
@@ -259,6 +258,9 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned 
 		DEBUGP("%s %s type1: %s\n", tbp->name, time_str,
 			osmo_ubit_dump(type2, tbp->type1_bits));
 	}
+
+	/* Set whether BLK1 or BLK2 in downlink burst (or 0 if not applicable) */
+	tup->blk_num = blk_num;
 
 	msg->l1h = msgb_put(msg, tbp->type1_bits);
 	memcpy(msg->l1h, type2, tbp->type1_bits);

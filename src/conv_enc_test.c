@@ -45,7 +45,7 @@
 static unsigned int num_crc_err;
 
 /* incoming TP-SAP UNITDATA.ind  from PHY into lower MAC */
-void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned int len, void *priv)
+void tp_sap_udata_ind(enum tp_sap_data_type type, int blk_num, const uint8_t *bits, unsigned int len, void *priv)
 {
 }
 

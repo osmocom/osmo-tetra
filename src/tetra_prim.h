@@ -28,6 +28,7 @@ struct tmv_unitdata_param {
 	int crc_ok;			/* was the CRC verified OK? */
 	uint32_t scrambling_code;	/* which scrambling code was used */
 	struct tetra_tdma_time tdma_time;/* TDMA timestamp  */
+	int blk_num;				/* Indicates whether BLK1 or BLK2 in the downlink burst */
 	//uint8_t mac_block[412];		/* maximum num of bits in a non-QAM chan */
 };
 

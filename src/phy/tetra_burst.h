@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+#define BLK_1 1
+#define BLK_2 2
+
 enum tp_sap_data_type {
 	TPSAP_T_SB1,
 	TPSAP_T_SB2,
@@ -12,7 +15,7 @@ enum tp_sap_data_type {
 	TPSAP_T_SCH_F,
 };
 
-extern void tp_sap_udata_ind(enum tp_sap_data_type type, const uint8_t *bits, unsigned int len, void *priv);
+extern void tp_sap_udata_ind(enum tp_sap_data_type type, int blk_num, const uint8_t *bits, unsigned int len, void *priv);
 
 /* 9.4.4.2.6 Synchronization continuous downlink burst */
 int build_sync_c_d_burst(uint8_t *buf, const uint8_t *sb, const uint8_t *bb, const uint8_t *bkn);
