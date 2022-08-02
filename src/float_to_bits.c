@@ -73,25 +73,47 @@ static void sym_int2bits(int sym, uint8_t *ret)
 
 // size of IO buffers (number of elements)
 #define BUF_SIZE 1024
+#define MAXVAL 5.0
+
 
 int main(int argc, char **argv)
 {
 	int fd, fd_out, opt;
-
 	int opt_verbose = 0;
+	int opt_afc = 0;
 
-	while ((opt = getopt(argc, argv, "v")) != -1) {
+	float filter = 0;
+	float filter_val = 0.0001;
+	float filter_goal = 0;
+	int sym;
+
+
+	while ((opt = getopt(argc, argv, "vaf:F:")) != -1) {
 		switch (opt) {
 		case 'v':
 			opt_verbose = 1;
 			break;
+		case 'a':
+			opt_afc = 1;
+			break;
+		case 'f':
+			filter_val = atof(optarg);
+			break;
+		case 'F':
+			filter_goal = atof(optarg);
+			break;
+
 		default:
 			exit(2);
 		}
 	}
 
 	if (argc <= optind+1) {
-		fprintf(stderr, "Usage: %s [-v] <infile> <outfile>\n", argv[0]);
+		fprintf(stderr, "Usage: %s [-v] [-a] [-f filter_val] [-F filter_goal] <infile> <outfile>\n", argv[0]);
+		fprintf(stderr, "-v verbose, print bits to stdout\n");
+		fprintf(stderr, "-a turn on pseudo-afc (automatic frequency correction)\n");
+		fprintf(stderr, "-f pseudo-afc averaging filter constant (default 0.0001)\n");
+		fprintf(stderr, "-F pseudo-afc filter goal (default: 0)\n");
 		exit(2);
 	}
 
@@ -119,7 +141,16 @@ int main(int argc, char **argv)
 		rc /= sizeof(*fl);
 		int i;
 		for (i = 0; i < rc; ++i) {
-			int sym = process_sym_fl(fl[i]);
+
+			if ((fl[i] > -MAXVAL) && (fl[i] < MAXVAL)) {
+				filter = filter * (1.0 - filter_val) + (fl[i] - filter_goal) * filter_val;
+			}
+			if (opt_afc) {
+				sym = process_sym_fl(fl[i]-filter);
+			} else {
+				sym = process_sym_fl(fl[i]);
+			}
+
 			sym_int2bits(sym, bits + i*2);
 			//printf("%2d %1u %1u  %f\n", rc, bits[0], bits[1], fl);
 			if (opt_verbose) {
