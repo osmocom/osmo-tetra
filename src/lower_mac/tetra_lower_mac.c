@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <linux/limits.h>
 
 #include <osmocom/core/utils.h>
@@ -196,6 +197,10 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, int blk_num, const uint8_t *bi
 		snprintf(fname, sizeof(fname), "%s/traffic_%d_%d.out", tms->dumpdir,
 			tms->cur_burst.is_traffic, tms->tsn);
 		f = fopen(fname, "ab");
+		if (!f) {
+			fprintf(stderr, "Could not open dump file %s for writing: %s\n", fname, strerror(errno));
+			exit(1);
+		}
 
 		/* Generate a block */
 		memset(block, 0x00, sizeof(int16_t) * 690);
