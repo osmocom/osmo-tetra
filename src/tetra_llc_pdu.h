@@ -73,12 +73,12 @@ struct tetra_llc_pdu {
 	uint8_t ns;		/* N(S) PDU number (sent) */
 	uint8_t ss;		/* S(S) Segment (sent) */
 
-	uint8_t have_fcs;			/* 1 if LLC PDU defines FCS is present */
-	uint32_t fcs;				/* FCS value extracted from pdu */
-	uint8_t fcs_invalid;		/* 1 if extracted FCS does not match computed FCS */
+	bool have_fcs;		/* 1 if LLC PDU defines FCS is present */
+	uint32_t fcs;		/* FCS value extracted from pdu */
+	bool fcs_invalid;	/* 1 if extracted FCS does not match computed FCS */
 
 	uint8_t *tl_sdu;	/* pointer to bitbuf */
-	uint8_t tl_sdu_len;	/* in bits */
+	uint32_t tl_sdu_len;	/* in bits */
 };
 
 /* parse a received LLC PDU and parse it into 'lpp' */

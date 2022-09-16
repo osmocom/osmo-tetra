@@ -91,7 +91,7 @@ static const uint8_t addr_len_by_type[] = {
 };
 
 /* 21.5.2 */
-static int macpdu_decode_chan_alloc(struct tetra_chan_alloc_decoded *cad, const uint8_t *bits)
+int macpdu_decode_chan_alloc(struct tetra_chan_alloc_decoded *cad, const uint8_t *bits)
 {
 	const uint8_t *cur = bits;
 
@@ -159,9 +159,6 @@ static int decode_nr_slots(uint8_t in)
 	};
 	return dec_tbl[in & 0xf];
 }
-
-#define MACPDU_LEN_2ND_STOLEN	-1
-#define MACPDU_LEN_START_FRAG	-2
 
 static int decode_length(unsigned int length_ind)
 {

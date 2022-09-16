@@ -1,6 +1,9 @@
 #ifndef TETRA_MAC_PDU
 #define TETRA_MAC_PDU
 
+#define MACPDU_LEN_2ND_STOLEN   -2
+#define MACPDU_LEN_START_FRAG   -1
+
 enum tetra_mac_pdu_types {
 	TETRA_PDU_T_MAC_RESOURCE = 0,
 	TETRA_PDU_T_MAC_FRAG_END = 1,
@@ -157,7 +160,7 @@ const char *tetra_get_ul_usage_name(uint8_t num);
 enum tetra_mac_res_addr_type {
 	ADDR_TYPE_NULL	= 0,
 	ADDR_TYPE_SSI	= 1,
-	ADDR_TYPE_EVENT_LABEL 	= 2,
+	ADDR_TYPE_EVENT_LABEL	= 2,
 	ADDR_TYPE_USSI		= 3,
 	ADDR_TYPE_SMI		= 4,
 	ADDR_TYPE_SSI_EVENT	= 5,
@@ -233,6 +236,8 @@ struct tetra_resrc_decoded {
 	struct tetra_chan_alloc_decoded cad;
 };
 int macpdu_decode_resource(struct tetra_resrc_decoded *rsd, const uint8_t *bits, uint8_t is_decrypted);
+
+int macpdu_decode_chan_alloc(struct tetra_chan_alloc_decoded *cad, const uint8_t *bits);
 
 const char *tetra_addr_dump(const struct tetra_addr *addr);
 
