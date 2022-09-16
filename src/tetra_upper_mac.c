@@ -276,7 +276,7 @@ static int rx_tmv_unitdata_ind(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_
 		return 0;
 
 	gsmtap_msg = tetra_gsmtap_makemsg(&tup->tdma_time, tup->lchan,
-					  tup->tdma_time.tn,
+					  tup->tdma_time.tn-1, /* expects timeslot in 0-3 range */
 					  /* FIXME: */ 0, 0, 0,
 					msg->l1h, msgb_l1len(msg), tms);
 	if (gsmtap_msg)

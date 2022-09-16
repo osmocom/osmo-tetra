@@ -273,7 +273,7 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, int blk_num, const uint8_t *bi
 	switch (type) {
 	case TPSAP_T_SB1:
 		printf("TMB-SAP SYNC CC %s(0x%02x) ", osmo_ubit_dump(type2+4, 6), bits_to_uint(type2+4, 6));
-		printf("TN %s(%u) ", osmo_ubit_dump(type2+10, 2), bits_to_uint(type2+10, 2));
+		printf("TN %s(%u) ", osmo_ubit_dump(type2+10, 2), bits_to_uint(type2+10, 2) + 1);
 		printf("FN %s(%2u) ", osmo_ubit_dump(type2+12, 5), bits_to_uint(type2+12, 5));
 		printf("MN %s(%2u) ", osmo_ubit_dump(type2+17, 6), bits_to_uint(type2+17, 6));
 		printf("MCC %s(%u) ", osmo_ubit_dump(type2+31, 10), bits_to_uint(type2+31, 10));
@@ -281,7 +281,7 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, int blk_num, const uint8_t *bi
 		/* obtain information from SYNC PDU */
 		if (tup->crc_ok) {
 			tcd->colour_code = bits_to_uint(type2+4, 6);
-			tcd->time.tn = bits_to_uint(type2+10, 2);
+			tcd->time.tn = bits_to_uint(type2+10, 2) + 1;
 			tcd->time.fn = bits_to_uint(type2+12, 5);
 			tcd->time.mn = bits_to_uint(type2+17, 6);
 			tcd->mcc = bits_to_uint(type2+31, 10);
