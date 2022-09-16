@@ -559,8 +559,5 @@ int upper_mac_prim_recv(struct osmo_prim_hdr *op, void *priv)
 		break;
 	}
 
-	talloc_free(op->msg);
-	talloc_free(op);
-
 	return pdu_bits;
 }

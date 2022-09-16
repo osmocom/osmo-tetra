@@ -307,10 +307,32 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, int blk_num, const uint8_t *bi
 		/* FIXME: do something */
 		break;
 	}
-	/* send Rx time along with the TMV-UNITDATA.ind primitive */
-	memcpy(&tup->tdma_time, &tcd->time, sizeof(tup->tdma_time));
 
-	upper_mac_prim_recv(&ttp->oph, tms);
+	int pdu_bits = 0;
+	uint32_t offset = 0;
+	uint8_t *orig_head = msg->head;
+	uint8_t *orig_tail = msg->tail;
+	while (offset < tbp->type1_bits - 16) {
+		/* send Rx time along with the TMV-UNITDATA.ind primitive */
+		memcpy(&tup->tdma_time, &tcd->time, sizeof(tup->tdma_time));
+		pdu_bits = upper_mac_prim_recv(&ttp->oph, tms);
+
+		if (pdu_bits < 0) {
+			/* -1 is returned when pdu fills slot or length could not be determined */
+			break;
+		}
+
+		/* Increment head and l1h ptrs and reset tail to end of msg (may be altered by removing FCS) */
+		offset += pdu_bits;
+		msg->head = orig_head + offset;
+		msg->tail = orig_tail;
+		msg->len = msg->tail - msg->head;
+		msg->l1h = msg->head;
+		msg->l2h = 0;
+		msg->l3h = 0;
+		msg->l4h = 0;
+	}
+
+	talloc_free(msg);
+	talloc_free(ttp);
 }
-
-
