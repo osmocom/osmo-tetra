@@ -109,9 +109,10 @@ int tetra_llc_pdu_parse(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
 {
 	uint8_t *cur = buf;
 	uint8_t pdu_type;
+
 	lpp->have_fcs = 0;
 	lpp->fcs = 0;
-
+	lpp->fcs_invalid = 0;
 	pdu_type = bits_to_uint(cur, 4);
 	cur += 4;
 
@@ -128,7 +129,7 @@ int tetra_llc_pdu_parse(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
 		if (pdu_type == TLLC_PDUT_BL_ADATA_FCS) {
 			if (lpp->tl_sdu_len < 32) {
 				printf("\nWARNING frame too small for FCS (%d)\n", lpp->tl_sdu_len);
-				return cur-buf;
+				goto out;
 			}
 			lpp->tl_sdu_len -= 32;
 			lpp->have_fcs = 1;
@@ -147,7 +148,7 @@ int tetra_llc_pdu_parse(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
 		if (pdu_type == TLLC_PDUT_BL_DATA_FCS) {
 			if (lpp->tl_sdu_len < 32) {
 				printf("\nWARNING frame too small for FCS (%d)\n", lpp->tl_sdu_len);
-				return cur-buf;
+				goto out;
 			}
 			lpp->tl_sdu_len -= 32;
 			lpp->have_fcs = 1;
@@ -165,7 +166,7 @@ int tetra_llc_pdu_parse(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
 		if (pdu_type == TLLC_PDUT_BL_UDATA_FCS) {
 			if (lpp->tl_sdu_len < 32) {
 				printf("\nWARNING frame too small for FCS (%d)\n", lpp->tl_sdu_len);
-				return cur-buf;
+				goto out;
 			}
 			lpp->tl_sdu_len -= 32;
 			lpp->have_fcs = 1;
@@ -174,19 +175,46 @@ int tetra_llc_pdu_parse(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
 		}
 		break;
 
+	case TLLC_PDUT_BL_ACK:
+	case TLLC_PDUT_BL_ACK_FCS:
+		lpp->nr = *cur++;
+		lpp->tl_sdu = cur;
+		lpp->tl_sdu_len = len - (cur - buf);
+		lpp->pdu_type = TLLC_PDUT_DEC_BL_ACK;
+
+		if (pdu_type == TLLC_PDUT_BL_ACK_FCS) {
+			if (lpp->tl_sdu_len < 32) {
+				printf("\nWARNING frame too small for FCS (%d)\n", lpp->tl_sdu_len);
+				goto out;
+			}
+			lpp->tl_sdu_len -= 32;
+			lpp->have_fcs = 1;
+			lpp->fcs = bits_to_uint(buf + len - 32, 32);
+			lpp->fcs_invalid = !tetra_llc_check_fcs(lpp, cur, lpp->tl_sdu_len);
+		}
+		break;
+
+	case TLLC_PDUT_AL_SETUP:
+		/* TODO FIXME IMPLEMENT */
+		lpp->pdu_type = TLLC_PDUT_DEC_AL_SETUP;
+		lpp->tl_sdu = cur;
+		lpp->tl_sdu_len = 0;
+		break;
+
 	case TLLC_PDUT_AL_DATA_FINAL:
 		if (*cur++) {
 			/* FINAL */
-			cur++;
+			cur++; /* if set, AL_FINAL_AR */
 			lpp->ns = bits_to_uint(cur, 3); cur += 3;
 			lpp->ss = bits_to_uint(cur, 8); cur += 8;
-			if (*cur++) {
-				/* FIXME: FCS */
-				len -= 32;
-			}
+
 			lpp->tl_sdu = cur;
 			lpp->tl_sdu_len = len - (cur - buf);
 			lpp->pdu_type = TLLC_PDUT_DEC_AL_FINAL;
+
+			/* Needs to be defragmented so FCS is checked elsewhere */
+			lpp->have_fcs = 1;
+
 		} else {
 			/* DATA Table 21.19 */
 			cur++;
@@ -197,25 +225,73 @@ int tetra_llc_pdu_parse(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
 			lpp->pdu_type = TLLC_PDUT_DEC_AL_DATA;
 		}
 		break;
+
 	case TLLC_PDUT_AL_UDATA_UFINAL:
 		if (*cur++) {
 			/* UFINAL 21.2.3.7 / Table 21.26 */
-			lpp->ns = bits_to_uint(cur, 8); cur+= 8;
-			lpp->ss = bits_to_uint(cur, 8); cur+= 8;
+			lpp->ns = bits_to_uint(cur, 8); cur += 8;
+			lpp->ss = bits_to_uint(cur, 8); cur += 8;
 			lpp->tl_sdu = cur;
-			/* FIXME: FCS */
-			len -= 32;
 			lpp->tl_sdu_len = len - (cur - buf);
 			lpp->pdu_type = TLLC_PDUT_DEC_AL_UFINAL;
+
+			/* Needs to be defragmented so FCS is checked elsewhere */
+			lpp->have_fcs = 1;
+
 		} else {
 			/* UDATA 21.2.3.6 / Table 21.24 */
-			lpp->ns = bits_to_uint(cur, 8); cur+= 8;
-			lpp->ss = bits_to_uint(cur, 8); cur+= 8;
+			lpp->ns = bits_to_uint(cur, 8); cur += 8;
+			lpp->ss = bits_to_uint(cur, 8); cur += 8;
 			lpp->tl_sdu = cur;
 			lpp->tl_sdu_len = len - (cur - buf);
 			lpp->pdu_type = TLLC_PDUT_DEC_AL_UDATA;
 		}
 		break;
+
+	case TLLC_PDUT_AL_ACK_RNR:
+		/* TODO FIXME IMPLEMENT */
+		if (*cur++) {
+			/* AL-ACK 21.2.3.1 */
+			lpp->pdu_type = TLLC_PDUT_DEC_AL_ACK;
+		} else {
+			/* AL-RNR 21.2.3.1 */
+			lpp->pdu_type = TLLC_PDUT_DEC_AL_RNR;
+		}
+
+		lpp->tl_sdu = cur;
+		lpp->tl_sdu_len = 0;
+		break;
+
+	case TLLC_PDUT_AL_RECONNECT:
+		/* TODO FIXME IMPLEMENT */
+		lpp->pdu_type = TLLC_PDUT_DEC_AL_RECONNECT;
+		lpp->tl_sdu = cur;
+		lpp->tl_sdu_len = 0;
+		break;
+
+	case TLLD_PDUT_AL_DISC:
+		/* TODO FIXME IMPLEMENT */
+		lpp->pdu_type = TLLC_PDUT_DEC_AL_DISC;
+		lpp->tl_sdu = cur;
+		lpp->tl_sdu_len = 0;
+		break;
+
+	case TLLC_PDUT_SUPPL:
+	case TLLC_PDUT_L2SIG:
+		/* TODO FIXME IMPLEMENT */
+	default:
+		/* Prevent further parsing */
+		lpp->pdu_type = TLLC_PDUT_DEC_UNKNOWN;
+		lpp->tl_sdu = cur;
+		lpp->tl_sdu_len = 0;
 	}
-	return (cur - buf);
+
+out:
+	/* Sanity check to prevent (further) out of bounds reads */
+	if (len < cur - buf) {
+		lpp->tl_sdu_len = 0;
+		return len;
+	}
+
+	return cur - buf;
 }
