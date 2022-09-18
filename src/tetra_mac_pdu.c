@@ -61,20 +61,19 @@ void macpdu_decode_sysinfo(struct tetra_si_decoded *sid, const uint8_t *si_bits)
 		sid->cck_id = bits_to_uint(cur, 16);
 	else
 		sid->hyperframe_number = bits_to_uint(cur, 16);
-	
 	sid->option_field      = bits_to_uint(cur,  2); cur +=  2;
-	switch(sid->option_field)
-	{
-	  case TETRA_MAC_OPT_FIELD_EVEN_MULTIFRAME:     // Even multiframe definition for TS mode
-	  case TETRA_MAC_OPT_FIELD_ODD_MULTIFRAME:      // Odd multiframe definition for TS mode
-	    sid->frame_bitmap = bits_to_uint(cur, 20); cur += 20;
-	    break;
-	  case TETRA_MAC_OPT_FIELD_ACCESS_CODE:         // Default definition for access code A
-	    sid->access_code = bits_to_uint(cur, 20); cur += 20;
-	    break;
-	  case TETRA_MAC_OPT_FIELD_EXT_SERVICES:        // Extended services broadcast
-	    sid->ext_service = bits_to_uint(cur, 20); cur += 20;
-	    break;
+
+	switch (sid->option_field) {
+	case TETRA_MAC_OPT_FIELD_EVEN_MULTIFRAME:     // Even multiframe definition for TS mode
+	case TETRA_MAC_OPT_FIELD_ODD_MULTIFRAME:      // Odd multiframe definition for TS mode
+		sid->frame_bitmap = bits_to_uint(cur, 20); cur += 20;
+		break;
+	case TETRA_MAC_OPT_FIELD_ACCESS_CODE:         // Default definition for access code A
+		sid->access_code = bits_to_uint(cur, 20); cur += 20;
+		break;
+	case TETRA_MAC_OPT_FIELD_EXT_SERVICES:        // Extended services broadcast
+		sid->ext_service = bits_to_uint(cur, 20); cur += 20;
+		break;
 	}
 
 	decode_d_mle_sysinfo(&sid->mle_si, si_bits + 124-42);  // could be also cur due to previous fixes
@@ -95,12 +94,12 @@ int macpdu_decode_chan_alloc(struct tetra_chan_alloc_decoded *cad, const uint8_t
 {
 	const uint8_t *cur = bits;
 
-	cad->type = 		bits_to_uint(cur, 2); cur += 2;
-	cad->timeslot = 	bits_to_uint(cur, 4); cur += 4;
-	cad->ul_dl = 		bits_to_uint(cur, 2); cur += 2;
-	cad->clch_perm = 	*cur++;
-	cad->cell_chg_f = 	*cur++;
-	cad->carrier_nr = 	bits_to_uint(cur, 12); cur += 12;
+	cad->type =		bits_to_uint(cur, 2); cur += 2;
+	cad->timeslot =		bits_to_uint(cur, 4); cur += 4;
+	cad->ul_dl =		bits_to_uint(cur, 2); cur += 2;
+	cad->clch_perm =	*cur++;
+	cad->cell_chg_f =	*cur++;
+	cad->carrier_nr =	bits_to_uint(cur, 12); cur += 12;
 
 	cad->ext_carr_pres =	*cur++;
 	if (cad->ext_carr_pres) {
@@ -115,15 +114,15 @@ int macpdu_decode_chan_alloc(struct tetra_chan_alloc_decoded *cad, const uint8_t
 		cur += 2;
 	}
 	if (cad->ul_dl == 0) {
-		cad->aug.ul_dl_ass =	bits_to_uint(cur, 2); cur += 2;
-		cad->aug.bandwidth =	bits_to_uint(cur, 3); cur += 3;
-		cad->aug.modulation =	bits_to_uint(cur, 3); cur += 3;
-		cad->aug.max_ul_qam =	bits_to_uint(cur, 3); cur += 3;
+		cad->aug.ul_dl_ass =		bits_to_uint(cur, 2); cur += 2;
+		cad->aug.bandwidth =		bits_to_uint(cur, 3); cur += 3;
+		cad->aug.modulation =		bits_to_uint(cur, 3); cur += 3;
+		cad->aug.max_ul_qam =		bits_to_uint(cur, 3); cur += 3;
 		cur += 3; /* reserved */
-		cad->aug.conf_chan_stat=bits_to_uint(cur, 3); cur += 3;
-		cad->aug.bs_imbalance =	bits_to_uint(cur, 4); cur += 4;
-		cad->aug.bs_tx_rel =	bits_to_uint(cur, 5); cur += 5;
-		cad->aug.napping_sts =	bits_to_uint(cur, 2); cur += 2;
+		cad->aug.conf_chan_stat =	bits_to_uint(cur, 3); cur += 3;
+		cad->aug.bs_imbalance =		bits_to_uint(cur, 4); cur += 4;
+		cad->aug.bs_tx_rel =		bits_to_uint(cur, 5); cur += 5;
+		cad->aug.napping_sts =		bits_to_uint(cur, 2); cur += 2;
 		if (cad->aug.napping_sts == 1)
 			cur += 11; /* napping info 21.5.2c */
 		cur += 4; /* reserved */
@@ -385,14 +384,14 @@ const char *tetra_get_ul_usage_name(uint8_t num)
 }
 
 static const struct value_string addr_type_names[] = {
-	{ ADDR_TYPE_NULL,	"Null PDU" },
-	{ ADDR_TYPE_SSI,	"SSI" },
-	{ ADDR_TYPE_EVENT_LABEL,"Event Label" },
-	{ ADDR_TYPE_USSI,	"USSI (migrading MS un-exchanged)" },
-	{ ADDR_TYPE_SMI,	"SMI (management)" },
-	{ ADDR_TYPE_SSI_EVENT,	"SSI + Event Label" },
-	{ ADDR_TYPE_SSI_USAGE,	"SSI + Usage Marker" },
-	{ ADDR_TYPE_SMI_EVENT,	"SMI + Event Label" },
+	{ ADDR_TYPE_NULL,		"Null PDU" },
+	{ ADDR_TYPE_SSI,		"SSI" },
+	{ ADDR_TYPE_EVENT_LABEL,	"Event Label" },
+	{ ADDR_TYPE_USSI,		"USSI (migrading MS un-exchanged)" },
+	{ ADDR_TYPE_SMI,		"SMI (management)" },
+	{ ADDR_TYPE_SSI_EVENT,		"SSI + Event Label" },
+	{ ADDR_TYPE_SSI_USAGE,		"SSI + Usage Marker" },
+	{ ADDR_TYPE_SMI_EVENT,		"SMI + Event Label" },
 	{ 0, NULL }
 };
 const char *tetra_get_addr_t_name(uint8_t addrt)

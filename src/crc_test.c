@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 
 	crc = ~crc16_itut_bits(0xffff, input2, 60);
 	printf("The CRC is now: %d/0x%x\n", crc, crc);
-	
+
 	/* swap the bytes */
 	crc = (crc << 8) | (crc >> 8);
 	osmo_pbit2ubit(&input2[60], (uint8_t *)&crc, 16);

@@ -8,7 +8,7 @@
 #ifdef DEBUG
 #define DEBUGP(x, args...)	printf(x, ## args)
 #else
-#define DEBUGP(x, args...)	do { } while(0)
+#define DEBUGP(x, args...)	do { } while (0)
 #endif
 
 #define TETRA_SYM_PER_TS	255

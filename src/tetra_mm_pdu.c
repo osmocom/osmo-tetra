@@ -24,7 +24,7 @@
 #include "tetra_mm_pdu.h"
 
 static const struct value_string mm_pdut_d_names[] = {
-	{ TMM_PDU_T_D_OTAR, 		"D-OTAR" },
+	{ TMM_PDU_T_D_OTAR,		"D-OTAR" },
 	{ TMM_PDU_T_D_AUTH,		"D-AUTHENTICATION" },
 	{ TMM_PDU_T_D_CK_CHG_DEM,	"D-CK CHANGE DEMAND" },
 	{ TMM_PDU_T_D_DISABLE,		"D-DISABLE" },

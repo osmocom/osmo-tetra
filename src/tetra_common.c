@@ -47,7 +47,7 @@ static const int16_t tetra_carrier_offset[4] = {
 	[0] =	     0,
 	[1] =	  6250,
 	[2] =	 -6250,
-	[3] =	+12500,
+	[3] =	 12500,
 };
 
 uint32_t tetra_dl_carrier_hz(uint8_t band, uint16_t carrier, uint8_t offset)
@@ -78,14 +78,14 @@ uint32_t tetra_ul_carrier_hz(uint8_t band, uint16_t carrier, uint8_t offset,
 	uint32_t duplex_spacing = tetra_duplex_spacing[duplex & 7][band & 15];
 
 	if (duplex_spacing < 0) /* reserved for future standardization */
-	    return 0;
+		return 0;
 
 	duplex_spacing *= 1000; // make Hz
 
 	if (reverse)
-	    freq += duplex_spacing;
+		freq += duplex_spacing;
 	else
-	    freq -= duplex_spacing;
+		freq -= duplex_spacing;
 
 	return freq;
 }

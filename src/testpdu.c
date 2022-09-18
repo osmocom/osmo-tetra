@@ -54,7 +54,7 @@ void testpdu_init()
 	bitvec_set_uint(&bv, 262, 10);	/* MCC */
 	bitvec_set_uint(&bv, 42, 14);	/* MNC */
 	bitvec_set_uint(&bv, 0, 2);	/* Neighbor cell boradcast: not supported */
-	bitvec_set_uint(&bv, 0, 2);	/* Cell service level: unknown */	
+	bitvec_set_uint(&bv, 0, 2);	/* Cell service level: unknown */
 	bitvec_set_bit(&bv, 0);		/* Late entry information */
 	printf("SYNC PDU: %s\n", osmo_hexdump(pdu_sync, sizeof(pdu_sync)));
 
