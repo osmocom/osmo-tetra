@@ -28,6 +28,7 @@
 #include <osmocom/core/bits.h>
 
 #include "tetra_llc_pdu.h"
+#include "tetra_mle.h"
 #include "tuntap.h"
 
 static int tun_fd = -1;
@@ -35,8 +36,6 @@ static int tun_fd = -1;
 static struct tllc_state g_llcs = {
 	.rx.defrag_list = LLIST_HEAD_INIT(g_llcs.rx.defrag_list),
 };
-
-int rx_tl_sdu(struct msgb *msg, unsigned int len);
 
 static struct tllc_defrag_q_e *
 get_dqe_for_ns(struct tllc_state *llcs, uint8_t ns, int alloc_if_missing)
@@ -79,8 +78,7 @@ static int tllc_defrag_in(struct tllc_state *llcs,
 	return 0;
 }
 
-static int tllc_defrag_out(struct tllc_state *llcs,
-			   struct tetra_llc_pdu *lpp)
+static int tllc_defrag_out(struct tetra_mac_state *tms, struct tllc_state *llcs, struct tetra_llc_pdu *lpp)
 {
 	struct tllc_defrag_q_e *dqe;
 	struct msgb *msg;
@@ -90,7 +88,7 @@ static int tllc_defrag_out(struct tllc_state *llcs,
 
 	printf("<<REMOVE>> ");
 	msg->l3h = msg->data;
-	rx_tl_sdu(msg, msgb_l3len(msg));
+	rx_tl_sdu(tms, msg, msgb_l3len(msg));
 
 	if (tun_fd < 0) {
 		tun_fd = tun_alloc("tun0");
@@ -110,16 +108,34 @@ static int tllc_defrag_out(struct tllc_state *llcs,
 
 /* Receive TM-SDU (MAC SDU == LLC PDU) */
 /* this resembles TMA-UNITDATA.ind (TM-SDU / length) */
-int rx_tm_sdu(struct msgb *msg, unsigned int len)
+int rx_tm_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len)
 {
-	struct tetra_llc_pdu lpp;
+	if (!len) {
+		return -1;
+	} else if (len < 4) {
+		printf("WARNING rx_tm_sdu: l2len too small: %d\n", len);
+		return -1;
+	}
 
+	struct tetra_llc_pdu lpp;
 	memset(&lpp, 0, sizeof(lpp));
 	tetra_llc_pdu_parse(&lpp, msg->l2h, len);
 	msg->l3h = lpp.tl_sdu;
+	msg->tail = msg->l3h + lpp.tl_sdu_len; // Strips off FCS (if present)
 
-	printf("TM-SDU(%s,%u,%u): ",
-		tetra_get_llc_pdut_dec_name(lpp.pdu_type), lpp.ns, lpp.ss);
+	printf("TM-SDU(%s)", tetra_get_llc_pdut_dec_name(lpp.pdu_type));
+	if (lpp.have_fcs) {
+		printf(" fcs=%s ", (lpp.have_fcs && lpp.fcs_invalid ? "BAD" : "OK"));
+	}
+	printf(" l3len=%d", msgb_l3len(msg));
+	if (msgb_l3len(msg)) {
+		printf(" %s", osmo_ubit_dump(msg->l3h, msgb_l3len(msg)));
+	}
+	printf("\n");
+
+	if (!lpp.tl_sdu_len) {
+		return len;
+	}
 
 	switch (lpp.pdu_type) {
 	case TLLC_PDUT_DEC_BL_ADATA:
@@ -132,7 +148,7 @@ int rx_tm_sdu(struct msgb *msg, unsigned int len)
 	case TLLC_PDUT_DEC_AL_RECONNECT:
 	case TLLC_PDUT_DEC_AL_DISC:
 		/* directly hand it to MLE */
-		rx_tl_sdu(msg, lpp.tl_sdu_len);
+		rx_tl_sdu(tms, msg, lpp.tl_sdu_len);
 		break;
 	case TLLC_PDUT_DEC_AL_DATA:
 	case TLLC_PDUT_DEC_AL_UDATA:
@@ -148,7 +164,7 @@ int rx_tm_sdu(struct msgb *msg, unsigned int len)
 		/* input into LLC defragmenter */
 		tllc_defrag_in(&g_llcs, &lpp, msg, len);
 		/* check if the fragment is complete and hand it off*/
-		tllc_defrag_out(&g_llcs, &lpp);
+		tllc_defrag_out(tms, &g_llcs, &lpp);
 		break;
 
 	case TLLC_PDUT_DEC_UNKNOWN:
@@ -158,9 +174,5 @@ int rx_tm_sdu(struct msgb *msg, unsigned int len)
 		break;
 	}
 
-	if (lpp.tl_sdu && lpp.ss == 0) {
-		/* this resembles TMA-UNITDATA.ind */
-		//rx_tl_sdu(msg, lpp.tl_sdu_len);
-	}
 	return len;
 }

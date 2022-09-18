@@ -32,13 +32,8 @@
 #include "tetra_upper_mac.h"
 #include "tetra_mac_pdu.h"
 #include "tetra_llc_pdu.h"
-#include "tetra_mm_pdu.h"
-#include "tetra_cmce_pdu.h"
-#include "tetra_sndcp_pdu.h"
-#include "tetra_mle_pdu.h"
+#include "tetra_llc.h"
 #include "tetra_gsmtap.h"
-
-static int rx_tm_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len);
 
 /* FIXME move global fragslots to context variable */
 struct fragslot fragslots[FRAGSLOT_NR_SLOTS] = {0};
@@ -144,64 +139,6 @@ const char *tetra_alloc_dump(const struct tetra_chan_alloc_decoded *cad, struct 
 	return buf;
 }
 
-/* Receive TL-SDU (LLC SDU == MLE PDU) */
-static int rx_tl_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len)
-{
-	uint8_t *bits = msg->l3h;
-	uint8_t mle_pdisc = bits_to_uint(bits, 3);
-
-	printf("TL-SDU(%s): %s", tetra_get_mle_pdisc_name(mle_pdisc),
-		osmo_ubit_dump(bits, len));
-	switch (mle_pdisc) {
-	case TMLE_PDISC_MM:
-		printf(" %s", tetra_get_mm_pdut_name(bits_to_uint(bits+3, 4), 0));
-		break;
-	case TMLE_PDISC_CMCE:
-		printf(" %s", tetra_get_cmce_pdut_name(bits_to_uint(bits+3, 5), 0));
-		break;
-	case TMLE_PDISC_SNDCP:
-		printf(" %s", tetra_get_sndcp_pdut_name(bits_to_uint(bits+3, 4), 0));
-		printf(" NSAPI=%u PCOMP=%u, DCOMP=%u",
-			bits_to_uint(bits+3+4, 4),
-			bits_to_uint(bits+3+4+4, 4),
-			bits_to_uint(bits+3+4+4+4, 4));
-		printf(" V%u, IHL=%u",
-			bits_to_uint(bits+3+4+4+4+4, 4),
-			4*bits_to_uint(bits+3+4+4+4+4+4, 4));
-		printf(" Proto=%u",
-			bits_to_uint(bits+3+4+4+4+4+4+4+64, 8));
-		break;
-	case TMLE_PDISC_MLE:
-		printf(" %s", tetra_get_mle_pdut_name(bits_to_uint(bits+3, 3), 0));
-		break;
-	default:
-		break;
-	}
-	return len;
-}
-
-static int rx_tm_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len)
-{
-	struct tetra_llc_pdu lpp;
-	uint8_t *bits = msg->l2h;
-
-	memset(&lpp, 0, sizeof(lpp));
-	tetra_llc_pdu_parse(&lpp, bits, len);
-
-	printf("TM-SDU(%s,%u,%u)",
-		tetra_get_llc_pdut_dec_name(lpp.pdu_type), lpp.ns, lpp.ss);
-	if (lpp.have_fcs) {
-		printf("(FCS: %s)", lpp.fcs_invalid ? "BAD" : "OK");
-	}
-	printf(": ");
-
-	if (lpp.tl_sdu && lpp.ss == 0) {
-		msg->l3h = lpp.tl_sdu;
-		rx_tl_sdu(tms, msg, lpp.tl_sdu_len);
-	}
-	return len;
-}
-
 static int rx_resrc(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms)
 {
 	struct msgb *msg = tmvp->oph.msg;
@@ -231,22 +168,26 @@ static int rx_resrc(struct tetra_tmvsap_prim *tmvp, struct tetra_mac_state *tms)
 
 	/* We now have accurate length and start of TM-SDU, set LLC start in msg->l2h */
 	msg->l2h = msg->l1h + tmpdu_offset;
-	printf("RESOURCE Encr=%u, len=%d l1_len=%d l2_len %d Addr=%s ",
+	printf("RESOURCE Encr=%u len_field=%d l1_len=%d l2_len %d Addr=%s",
 		rsd.encryption_mode, rsd.macpdu_length, msgb_l1len(msg), msgb_l2len(msg),
 		tetra_addr_dump(&rsd.addr));
+
+	if (rsd.chan_alloc_pres)
+		printf(" ChanAlloc=%s", tetra_alloc_dump(&rsd.cad, tms));
+
+	if (rsd.slot_granting.pres)
+		printf(" SlotGrant=%u/%u", rsd.slot_granting.nr_slots,
+			rsd.slot_granting.delay);
 
 	if (rsd.addr.type == ADDR_TYPE_NULL) {
 		pdu_bits = -1; /* No more PDUs in slot */
 		goto out;
 	}
+	if (msgb_l2len(msg) == 0) {
+		goto out; /* No l2 data */
+	}
 
-	if (rsd.chan_alloc_pres)
-		printf("ChanAlloc=%s ", tetra_alloc_dump(&rsd.cad, tms));
-
-	if (rsd.slot_granting.pres)
-		printf("SlotGrant=%u/%u ", rsd.slot_granting.nr_slots,
-			rsd.slot_granting.delay);
-
+	printf(": %s\n", osmo_ubit_dump(msg->l2h, msgb_l2len(msg)));
 	if (rsd.macpdu_length != MACPDU_LEN_START_FRAG || !REASSEMBLE_FRAGMENTS) {
 		/* Non-fragmented resource (or no reassembly desired) */
 		if (!rsd.is_encrypted) {
