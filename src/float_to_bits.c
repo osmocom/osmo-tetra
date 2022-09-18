@@ -81,12 +81,10 @@ int main(int argc, char **argv)
 	int fd, fd_out, opt;
 	int opt_verbose = 0;
 	int opt_afc = 0;
-
 	float filter = 0;
 	float filter_val = 0.0001;
 	float filter_goal = 0;
 	int sym;
-
 
 	while ((opt = getopt(argc, argv, "vaf:F:")) != -1) {
 		switch (opt) {
@@ -141,11 +139,10 @@ int main(int argc, char **argv)
 		rc /= sizeof(*fl);
 		int i;
 		for (i = 0; i < rc; ++i) {
-
-			if ((fl[i] > -MAXVAL) && (fl[i] < MAXVAL)) {
-				filter = filter * (1.0 - filter_val) + (fl[i] - filter_goal) * filter_val;
-			}
 			if (opt_afc) {
+				if ((fl[i] > -MAXVAL) && (fl[i] < MAXVAL)) {
+					filter = filter * (1.0 - filter_val) + (fl[i] - filter_goal) * filter_val;
+				}
 				sym = process_sym_fl(fl[i]-filter);
 			} else {
 				sym = process_sym_fl(fl[i]);
