@@ -82,6 +82,25 @@ const char *tetra_get_llc_pdut_dec_name(enum tllc_pdut_dec pdut)
 	return get_value_string(pdut_dec_names, pdut);
 }
 
+static const uint8_t tetra_llc_pdu_lengths[16] = {
+	6,	/* TLLC_PDUT_BL_ADATA */
+	5,	/* TLLC_PDUT_BL_DATA */
+	4,	/* TLLC_PDUT_BL_UDATA */
+	5,	/* TLLC_PDUT_BL_ACK */
+	6 + 32,	/* TLLC_PDUT_BL_ADATA_FCS */
+	5 + 32,	/* TLLC_PDUT_BL_DATA_FCS */
+	4 + 32,	/* TLLC_PDUT_BL_UDATA_FCS */
+	5 + 32,	/* TLLC_PDUT_BL_ACK_FCS */
+	0,	/* Not implemented, TLLC_PDUT_AL_SETUP */
+	13,	/* TLLC_PDUT_AL_DATA_FINAL */
+	17,	/* TLLC_PDUT_AL_UDATA_UFINAL */
+	1,	/* Not implemented, TLLC_PDUT_AL_ACK_RNR */
+	0,	/* Not implemented, TLLC_PDUT_AL_RECONNECT */
+	0,	/* Not implemented, TLLC_PDUT_SUPPL */
+	0,	/* Not implemented, TLLC_PDUT_L2SIG */
+	0,	/* Not implemented, TLLD_PDUT_AL_DISC */
+};
+
 static uint32_t tetra_llc_compute_fcs(const uint8_t *buf, int len)
 {
 	uint32_t crc = 0xFFFFFFFF;
@@ -99,7 +118,7 @@ static uint32_t tetra_llc_compute_fcs(const uint8_t *buf, int len)
 	return ~crc;
 }
 
-static int tetra_llc_check_fcs(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
+static bool tetra_llc_check_fcs(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
 {
 	uint32_t computed_fcs = tetra_llc_compute_fcs(buf, len);
 	return lpp->fcs == computed_fcs;
@@ -110,11 +129,18 @@ int tetra_llc_pdu_parse(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
 	uint8_t *cur = buf;
 	uint8_t pdu_type;
 
-	lpp->have_fcs = 0;
+	lpp->have_fcs = false;
 	lpp->fcs = 0;
-	lpp->fcs_invalid = 0;
+	lpp->fcs_invalid = false;
 	pdu_type = bits_to_uint(cur, 4);
 	cur += 4;
+
+	/* Check length to prevent out of bounds reads */
+	if (len < tetra_llc_pdu_lengths[pdu_type]) {
+		printf("WARNING llc pdu too small to parse, needed %d\n", tetra_llc_pdu_lengths[pdu_type]);
+		lpp->tl_sdu_len = 0;
+		return len;
+	}
 
 	switch (pdu_type) {
 
@@ -127,12 +153,8 @@ int tetra_llc_pdu_parse(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
 		lpp->pdu_type = TLLC_PDUT_DEC_BL_ADATA;
 
 		if (pdu_type == TLLC_PDUT_BL_ADATA_FCS) {
-			if (lpp->tl_sdu_len < 32) {
-				printf("\nWARNING frame too small for FCS (%d)\n", lpp->tl_sdu_len);
-				goto out;
-			}
 			lpp->tl_sdu_len -= 32;
-			lpp->have_fcs = 1;
+			lpp->have_fcs = true;
 			lpp->fcs = bits_to_uint(buf + len - 32, 32);
 			lpp->fcs_invalid = !tetra_llc_check_fcs(lpp, cur, lpp->tl_sdu_len);
 		}
@@ -146,12 +168,8 @@ int tetra_llc_pdu_parse(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
 		lpp->pdu_type = TLLC_PDUT_DEC_BL_DATA;
 
 		if (pdu_type == TLLC_PDUT_BL_DATA_FCS) {
-			if (lpp->tl_sdu_len < 32) {
-				printf("\nWARNING frame too small for FCS (%d)\n", lpp->tl_sdu_len);
-				goto out;
-			}
 			lpp->tl_sdu_len -= 32;
-			lpp->have_fcs = 1;
+			lpp->have_fcs = true;
 			lpp->fcs = bits_to_uint(buf + len - 32, 32);
 			lpp->fcs_invalid = !tetra_llc_check_fcs(lpp, cur, lpp->tl_sdu_len);
 		}
@@ -164,12 +182,8 @@ int tetra_llc_pdu_parse(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
 		lpp->pdu_type = TLLC_PDUT_DEC_BL_UDATA;
 
 		if (pdu_type == TLLC_PDUT_BL_UDATA_FCS) {
-			if (lpp->tl_sdu_len < 32) {
-				printf("\nWARNING frame too small for FCS (%d)\n", lpp->tl_sdu_len);
-				goto out;
-			}
 			lpp->tl_sdu_len -= 32;
-			lpp->have_fcs = 1;
+			lpp->have_fcs = true;
 			lpp->fcs = bits_to_uint(buf + len - 32, 32);
 			lpp->fcs_invalid = !tetra_llc_check_fcs(lpp, cur, lpp->tl_sdu_len);
 		}
@@ -183,12 +197,8 @@ int tetra_llc_pdu_parse(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
 		lpp->pdu_type = TLLC_PDUT_DEC_BL_ACK;
 
 		if (pdu_type == TLLC_PDUT_BL_ACK_FCS) {
-			if (lpp->tl_sdu_len < 32) {
-				printf("\nWARNING frame too small for FCS (%d)\n", lpp->tl_sdu_len);
-				goto out;
-			}
 			lpp->tl_sdu_len -= 32;
-			lpp->have_fcs = 1;
+			lpp->have_fcs = true;
 			lpp->fcs = bits_to_uint(buf + len - 32, 32);
 			lpp->fcs_invalid = !tetra_llc_check_fcs(lpp, cur, lpp->tl_sdu_len);
 		}
@@ -286,7 +296,6 @@ int tetra_llc_pdu_parse(struct tetra_llc_pdu *lpp, uint8_t *buf, int len)
 		lpp->tl_sdu_len = 0;
 	}
 
-out:
 	/* Sanity check to prevent (further) out of bounds reads */
 	if (len < cur - buf) {
 		lpp->tl_sdu_len = 0;
