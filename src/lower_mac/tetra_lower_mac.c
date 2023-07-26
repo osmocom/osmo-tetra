@@ -186,8 +186,14 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, int blk_num, const uint8_t *bi
 	DEBUGP("%s %s type4: %s\n", tbp->name, time_str,
 		osmo_ubit_dump(type4, tbp->type345_bits));
 
+	/* Handle block 1 slot stealing, see clause 19.4.4 */
+	/* Block 1 is stolen if AACH says slot is traffic and burst used training sequence 1 */
+	/* Block 2 is stolen if indicated in stolen block 1 resource len (-2) */
+	if (tms->cur_burst.is_traffic && type == TPSAP_T_NDB && blk_num == BLK_1)
+		tms->cur_burst.blk1_stolen = true;
+
 	/* If this is a traffic channel, dump. */
-	if ((type == TPSAP_T_SCH_F) && tms->cur_burst.is_traffic && tms->dumpdir) {
+	if (tms->cur_burst.is_traffic && (type == TPSAP_T_SCH_F || (blk_num == BLK_2 && !tms->cur_burst.blk2_stolen))) {
 		char fname[PATH_MAX];
 		int16_t block[690];
 		FILE *f;
@@ -229,6 +235,7 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, int blk_num, const uint8_t *bi
 		f = fopen(fname, "a");
 		fprintf(f, "%d\n", tms->ssi);
 		fclose(f);
+		goto out;
 	}
 
 	if (tbp->interleave_a) {
@@ -333,6 +340,7 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, int blk_num, const uint8_t *bi
 		msg->l4h = 0;
 	}
 
+out:
 	talloc_free(msg);
 	talloc_free(ttp);
 }

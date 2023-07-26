@@ -3,7 +3,11 @@
 
 #include <stdint.h>
 #include "tetra_mac_pdu.h"
+#include <stdbool.h>
 #include <osmocom/core/linuxlist.h>
+
+#include "tetra_common.h"
+#include "tetra_mac_pdu.h"
 
 #ifdef DEBUG
 #define DEBUGP(x, args...)	printf(x, ## args)
@@ -46,12 +50,16 @@ struct tetra_mac_state {
 	struct llist_head voice_channels;
 	struct {
 		int is_traffic;
+		bool blk1_stolen;
+		bool blk2_stolen;
 	} cur_burst;
 	struct tetra_si_decoded last_sid;
 
 	char *dumpdir;	/* Where to save traffic channel dump */
 	int ssi;	/* SSI */
 	int tsn;	/* Timeslon number */
+	int usage_marker; /* Usage marker (if addressed)*/
+	int addr_type;
 };
 
 void tetra_mac_state_init(struct tetra_mac_state *tms);
