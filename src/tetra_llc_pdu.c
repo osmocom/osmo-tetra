@@ -24,6 +24,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+#include <stdbool.h>
 
 #include <osmocom/core/utils.h>
 
