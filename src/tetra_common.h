@@ -55,6 +55,8 @@ struct tetra_mac_state {
 	} cur_burst;
 	struct tetra_si_decoded last_sid;
 
+	struct tetra_crypto_state *tcs; /* contains all state relevant to encryption */
+
 	char *dumpdir;	/* Where to save traffic channel dump */
 	int ssi;	/* SSI */
 	int tsn;	/* Timeslon number */

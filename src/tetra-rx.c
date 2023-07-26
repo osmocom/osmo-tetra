@@ -30,6 +30,7 @@
 #include <osmocom/core/talloc.h>
 
 #include "tetra_common.h"
+#include "crypto/tetra_crypto.h"
 #include <phy/tetra_burst.h>
 #include <phy/tetra_burst_sync.h>
 #include "tetra_gsmtap.h"
@@ -43,8 +44,11 @@ int main(int argc, char **argv)
 	struct tetra_rx_state *trs;
 	struct tetra_mac_state *tms;
 
+	/* Initialize tetra mac state and crypto state */
 	tms = talloc_zero(tetra_tall_ctx, struct tetra_mac_state);
 	tetra_mac_state_init(tms);
+	tms->tcs = talloc_zero(NULL, struct tetra_crypto_state);
+	tetra_crypto_state_init(tms->tcs);
 
 	trs = talloc_zero(tetra_tall_ctx, struct tetra_rx_state);
 	trs->burst_cb_priv = tms;
