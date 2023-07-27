@@ -14,6 +14,7 @@ struct fragslot {
 	int num_frags;			/* Maintains the number of fragments appended in the msgb */
 	int length;			/* Maintains the number of bits appended in the msgb */
 	bool encryption;		/* Set to true if the fragments were received encrypted */
+	struct tetra_key *key;		/* Holds pointer to the key to be used for this slot */
 	struct msgb *msgb;		/* Message buffer in which fragments are appended */
 };
 

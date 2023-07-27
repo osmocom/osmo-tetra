@@ -114,13 +114,13 @@ int load_keystore(char *filename);
 
 /* Keystream generation and decryption functions */
 uint32_t tea_build_iv(struct tetra_tdma_time *tm, uint16_t hn, uint8_t dir);
-int decrypt_identity(struct tetra_addr *addr);
-int decrypt_mac_element(struct tetra_tmvsap_prim *tmvp, struct tetra_key *key, int l1_len, int tmpdu_offset);
-int decrypt_voice_timeslot(struct tetra_tdma_time *tdma_time, int16_t *type1_bits);
+int decrypt_identity(struct tetra_crypto_state *tcs, struct tetra_addr *addr);
+int decrypt_mac_element(struct tetra_crypto_state *tcs, struct tetra_tmvsap_prim *tmvp, struct tetra_key *key, int l1_len, int tmpdu_offset);
+int decrypt_voice_timeslot(struct tetra_crypto_state *tcs, struct tetra_tdma_time *tdma_time, int16_t *type1_bits);
 
 /* Key selection and crypto state management */
-struct tetra_key *get_ksg_key(struct tetra_crypto_state *tcs, int addr);
 struct tetra_netinfo *get_network_info(int mcc, int mnc);
+struct tetra_key *get_ksg_key(struct tetra_crypto_state *tcs, int addr);
 void update_current_network(struct tetra_crypto_state *tcs, int mcc, int mnc);
 void update_current_cck(struct tetra_crypto_state *tcs);
 

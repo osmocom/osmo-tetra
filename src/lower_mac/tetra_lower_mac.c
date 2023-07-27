@@ -40,6 +40,7 @@
 #include <tetra_prim.h>
 #include "tetra_upper_mac.h"
 #include <lower_mac/viterbi.h>
+#include <crypto/tetra_crypto.h>
 
 struct tetra_blk_param {
 	const char *name;
@@ -149,6 +150,7 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, int blk_num, const uint8_t *bi
 
 	const struct tetra_blk_param *tbp = &tetra_blk_param[type];
 	struct tetra_mac_state *tms = priv;
+	struct tetra_crypto_state *tcs = tms->tcs;
 	const char *time_str;
 
 	/* TMV-SAP.UNITDATA.ind primitive which we will send to the upper MAC */
@@ -299,6 +301,12 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, int blk_num, const uint8_t *bi
 		/* update the PHY layer time */
 		memcpy(&t_phy_state.time, &tcd->time, sizeof(t_phy_state.time));
 		tup->lchan = TETRA_LC_BSCH;
+
+		/* Update colour code and network info for crypto IV generation */
+		tcs->cc = tcd->colour_code;
+		if (tcs->mcc != tcd->mcc || tcs->mnc != tcd->mnc)
+			update_current_network(tcs, tcd->mcc, tcd->mnc);
+
 		break;
 	case TPSAP_T_SB2:
 	case TPSAP_T_NDB:

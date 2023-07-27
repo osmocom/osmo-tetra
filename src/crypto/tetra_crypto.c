@@ -149,17 +149,17 @@ uint32_t tea_build_iv(struct tetra_tdma_time *tm, uint16_t hn, uint8_t dir)
 	return ((tm->tn - 1) | (tm->fn << 2) | (tm->mn << 7) | ((hn & 0x7FFF) << 13) | (dir << 28));
 }
 
-int decrypt_identity(struct tetra_addr *addr)
+int decrypt_identity(struct tetra_crypto_state *tcs, struct tetra_addr *addr)
 {
 	return 0;
 }
 
-int decrypt_mac_element(struct tetra_tmvsap_prim *tmvp, struct tetra_key *key, int l1_len, int tmpdu_offset)
+int decrypt_mac_element(struct tetra_crypto_state *tcs, struct tetra_tmvsap_prim *tmvp, struct tetra_key *key, int l1_len, int tmpdu_offset)
 {
 	return 0;
 }
 
-int decrypt_voice_timeslot(struct tetra_tdma_time *tdma_time, int16_t *type1_block)
+int decrypt_voice_timeslot(struct tetra_crypto_state *tcs, struct tetra_tdma_time *tdma_time, int16_t *type1_block)
 {
 	return 0;
 }
