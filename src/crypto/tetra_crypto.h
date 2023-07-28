@@ -35,15 +35,13 @@
 #define TCDB_ALLOC_BLOCK_SIZE 16
 
 enum tetra_key_type {
-	KEYTYPE_UNDEFINED		= 0x00,
+	KEYTYPE_UNDEFINED		= 0,
 
 	/* Keytypes usable as ECK after applying TB5 */
-	KEYTYPE_DCK			= 0x01,
-	KEYTYPE_MGCK			= 0x02,
-	KEYTYPE_CCK_SCK			= 0x04, /* SCK in class 2, CCK in class 3 networks */
-
-	/* Can be combined with SCK/CCK to get MGCK */
-	KEYTYPE_GCK			= 0x20,
+	KEYTYPE_CCK_SCK			= 1, /* SCK in class 2, CCK in class 3 networks */
+	KEYTYPE_DCK			= 2, /* FIXME: add support for DCK */
+	KEYTYPE_MGCK			= 4, /* FIXME: add support for MGCK */
+	KEYTYPE_GCK			= 8, /* FIXME: add support. Used with SCK/CCK to derive MGCK */
 };
 
 enum tetra_ksg_type {
@@ -109,7 +107,6 @@ const char *tetra_get_security_class_name(uint8_t pdut);
 
 /* Key loading / unloading */
 void tetra_crypto_state_init(struct tetra_crypto_state *tcs);
-void tetra_crypto_db_init(void);
 int load_keystore(char *filename);
 
 /* Keystream generation and decryption functions */

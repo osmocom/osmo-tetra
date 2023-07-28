@@ -93,6 +93,7 @@ int main(int argc, char **argv)
 
 	free(tms->dumpdir);
 	talloc_free(trs);
+	talloc_free(tms->tcs);
 	talloc_free(tms);
 
 	exit(0);
