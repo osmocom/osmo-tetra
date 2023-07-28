@@ -150,19 +150,123 @@ uint32_t tea_build_iv(struct tetra_tdma_time *tm, uint16_t hn, uint8_t dir)
 	return ((tm->tn - 1) | (tm->fn << 2) | (tm->mn << 7) | ((hn & 0x7FFF) << 13) | (dir << 28));
 }
 
-int decrypt_identity(struct tetra_crypto_state *tcs, struct tetra_addr *addr)
+static bool generate_keystream(struct tetra_crypto_state *tcs, struct tetra_key *key, struct tetra_tdma_time *t, int num_bits, uint8_t *ks_out)
 {
-	return 0;
+	if (!key)
+		return false;
+
+	/* Construct IV and prepare buf for bytewise keystream */
+	int num_bytes = (num_bits + 7) / 8;
+	uint8_t ks_bytes[num_bytes];
+	uint32_t iv = tea_build_iv(t, tcs->hn, 0);
+
+	/* Compute ECK from net info and CK */
+	if (tcs->cn < 0 || tcs->la < 0 || tcs->cc < 0)
+		/* Missing data for TB5 */
+		return false;
+
+	uint8_t eck[10];
+	uint8_t cn[2] = {(tcs->cn >> 8) & 0xFF, tcs->cn & 0xFF};
+	uint8_t la[2] = {(tcs->la >> 8) & 0xFF, tcs->la & 0xFF};
+	uint8_t cc[1] = {tcs->cc & 0xFF};
+	/* TODO FIXME add call to TB5 to derive eck */
+
+	/* Generate keystream with required KSG */
+	switch (key->network_info->ksg_type) {
+	/* TODO FIXME add cases/calls to TEA keystream generator functions */
+	default:
+		fprintf(stderr, "tetra_crypto: KSG type %d not supported\n", key->network_info->ksg_type);
+		return false;
+	}
+
+	for (int i = 0; i < num_bytes; i++)
+		for (int j = 0; j < 8; j++)
+			ks_out[i * 8 + j] = (ks_bytes[i] >> (7-j)) & 1;
+
+	/* Expand keystream bytes into ubit format */
+	for (int i = 0; i < num_bits; i++)
+		ks_out[i] = (ks_bytes[num_bits / 8] >> (7-(num_bits % 8))) & 1;
+
+	return true;
 }
 
-int decrypt_mac_element(struct tetra_crypto_state *tcs, struct tetra_tmvsap_prim *tmvp, struct tetra_key *key, int l1_len, int tmpdu_offset)
+bool decrypt_identity(struct tetra_crypto_state *tcs, struct tetra_addr *addr)
 {
-	return 0;
+	/* TODO FIXME implement TA61 decryption */
+	return false;
 }
 
-int decrypt_voice_timeslot(struct tetra_crypto_state *tcs, struct tetra_tdma_time *tdma_time, int16_t *type1_block)
+bool decrypt_mac_element(struct tetra_crypto_state *tcs, struct tetra_tmvsap_prim *tmvp, struct tetra_key *key, int l1_len, int tmpdu_offset)
 {
-	return 0;
+	if (!key || l1_len - tmpdu_offset <= 0)
+		return false;
+
+	if (tcs->cn < 0 || tcs->la < 0 || tcs->cc < 0) {
+		printf("tetra_crypto: can't compute TB5 due to incomplete network info (carr %d la %d cc %d)\n",
+			tcs->cn, tcs->la, tcs->cc);
+		return false;
+	}
+
+	struct tetra_tdma_time *tdma_time = &tmvp->u.unitdata.tdma_time;
+
+	/* Compute keystream offset to apply */
+	/* TODO FIXME maybe we can rework channel type setting in lower mac, and
+	   avoid using TETRA_LC_UNKNOWN below */
+	uint32_t ks_skip_bits = 0;
+	if (tmvp->u.unitdata.blk_num == BLK_2 && (
+			tmvp->u.unitdata.lchan == TETRA_LC_SCH_HD ||
+			tmvp->u.unitdata.lchan == TETRA_LC_UNKNOWN)) {
+		ks_skip_bits = 216;
+		printf("tetra_crypto: 2nd half slot; skipping bits\n");
+	}
+
+	/* Generate keystream */
+	struct msgb *msg = tmvp->oph.msg;
+	int ct_len = l1_len - tmpdu_offset;
+	int ks_num_bits = ks_skip_bits + ct_len;
+	uint8_t *ct_start = msg->l1h + tmpdu_offset;
+	uint8_t ks[ks_num_bits];
+	if (!generate_keystream(tcs, key, tdma_time, ks_num_bits, ks))
+		return false;
+
+	/* Apply keystream */
+	for (int i = 0; i < ct_len; i++)
+		ct_start[i] = ct_start[i] ^ ks[i + ks_skip_bits];
+
+	printf("tetra_crypto: addr %8d -> key %4d, time %5d/%s, tmpdu offset %d, decrypting %d bits\n",
+		key->addr, key->index, tcs->hn, tetra_tdma_time_dump(tdma_time), tmpdu_offset, ct_len);
+
+	return true;
+}
+
+bool decrypt_voice_timeslot(struct tetra_crypto_state *tcs, struct tetra_tdma_time *tdma_time, int16_t *type1_block)
+{
+	/* TODO FIXME implement proper key selection for voice blocks */
+	struct tetra_key *key = tcs->cck;
+	if (!key)
+		return false;
+
+	if (tcs->cn < 0 || tcs->la < 0 || tcs->cc < 0) {
+		printf("tetra_crypto: can't compute TB5 due to incomplete network info (carr %d la %d cc %d)\n",
+			tcs->cn, tcs->la, tcs->cc);
+		return false;
+	}
+
+	/* Generate keystream */
+	int ks_num_bits = 137*2; // two half slots of voice
+	uint8_t ks[ks_num_bits];
+	if (!generate_keystream(tcs, key, tdma_time, ks_num_bits, ks))
+		return false;
+
+	/* Apply keystream */
+	for (int i = 0; i < 137; i++) {
+		type1_block[i + 1] = type1_block[i + 1] ^ ks[i];
+		type1_block[i + 139] = type1_block[i + 139] ^ ks[i + 137];
+	}
+
+	printf("tetra_crypto: addr %8d -> key %4d, time %5d/%s, decrypted voice\n",
+		key->addr, key->index, tcs->hn, tetra_tdma_time_dump(tdma_time));
+	return true;
 }
 
 int load_keystore(char *tetra_keyfile)
@@ -197,7 +301,7 @@ int load_keystore(char *tetra_keyfile)
 	while (fgets(buf, sizeof(buf), fp)) {
 
 		if (strlen(buf) <= 1 || buf[0] == '#') {
-			// Commented/empty line
+			/* Commented/empty line */
 			continue;
 
 		} else if (!strncmp(buf, "network ", 8)) {
@@ -299,11 +403,11 @@ struct tetra_key *get_ksg_key(struct tetra_crypto_state *tcs, int addr)
 
 void update_current_network(struct tetra_crypto_state *tcs, int mcc, int mnc)
 {
-	// Update globals
+	/* Update globals */
 	tcs->mcc = mcc;
 	tcs->mnc = mnc;
 
-	// Network changed, update reference to current network
+	/* Network changed, update reference to current network */
 	tcs->network = 0;
 	for (int i = 0; i < tcdb->num_nets; i++) {
 		struct tetra_netinfo *network = &tcdb->nets[i];
@@ -313,7 +417,7 @@ void update_current_network(struct tetra_crypto_state *tcs, int mcc, int mnc)
 		}
 	}
 
-	// (Try to) select new CCK/SCK
+	/* (Try to) select new CCK/SCK */
 	update_current_cck(tcs);
 }
 
