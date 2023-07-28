@@ -30,4 +30,4 @@ conv_enc_test: conv_enc_test.o testpdu.o libosmo-tetra-phy.a libosmo-tetra-mac.a
 tunctl: tunctl.o
 
 clean:
-	@rm -f tunctl float_to_bits crc_test tetra-rx conv_enc_test *.o phy/*.o lower_mac/*.o *.a
+	@rm -f tunctl float_to_bits crc_test tetra-rx conv_enc_test *.o phy/*.o lower_mac/*.o crypto/*.o *.a
