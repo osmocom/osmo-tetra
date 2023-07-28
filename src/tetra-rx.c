@@ -53,10 +53,13 @@ int main(int argc, char **argv)
 	trs = talloc_zero(tetra_tall_ctx, struct tetra_rx_state);
 	trs->burst_cb_priv = tms;
 
-	while ((opt = getopt(argc, argv, "d:")) != -1) {
+	while ((opt = getopt(argc, argv, "d:k:")) != -1) {
 		switch (opt) {
 		case 'd':
 			tms->dumpdir = strdup(optarg);
+			break;
+		case 'k':
+			load_keystore(optarg);
 			break;
 		default:
 			fprintf(stderr, "Unknown option %c\n", opt);
