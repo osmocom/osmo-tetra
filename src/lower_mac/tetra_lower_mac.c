@@ -325,23 +325,26 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, int blk_num, const uint8_t *bi
 
 	int pdu_bits = 0;
 	uint32_t offset = 0;
-	uint8_t *orig_head = msg->head;
-	uint8_t *orig_tail = msg->tail;
+	uint8_t *orig_head = msg->head; /* The true start of the timeslot */
+	uint8_t *orig_tail = msg->tail; /* The true end of the timeslot */
 	while (offset < tbp->type1_bits - 16) {
 		/* send Rx time along with the TMV-UNITDATA.ind primitive */
 		memcpy(&tup->tdma_time, &tcd->time, sizeof(tup->tdma_time));
+
+		/* Parse MAC element in timeslot (just one, possibly more later in the loop) */
 		pdu_bits = upper_mac_prim_recv(&ttp->oph, tms);
 
-		if (pdu_bits < 0) {
-			/* -1 is returned when pdu fills slot or length could not be determined */
+		/* Check if we are done (-1 returned) */
+		if (pdu_bits < 0)
 			break;
-		}
 
-		/* Increment head and l1h ptrs and reset tail to end of msg (may be altered by removing FCS) */
+		/* Not done */
+		/* Increment head and l1h ptrs */
+		/* Reset tail to end of msg (may be altered by removing FCS) */
 		offset += pdu_bits;
-		msg->head = orig_head + offset;
-		msg->tail = orig_tail;
-		msg->len = msg->tail - msg->head;
+		msg->head = orig_head + offset;		/* New head is old head plus parsed len from prev msg */
+		msg->tail = orig_tail;			/* Restore original tail */
+		msg->len = msg->tail - msg->head;	/* Fixup len */
 		msg->l1h = msg->head;
 		msg->l2h = 0;
 		msg->l3h = 0;

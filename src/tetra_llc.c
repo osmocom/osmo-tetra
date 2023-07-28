@@ -122,6 +122,7 @@ int rx_tm_sdu(struct tetra_mac_state *tms, struct msgb *msg, unsigned int len)
 	tetra_llc_pdu_parse(&lpp, msg->l2h, len);
 	msg->l3h = lpp.tl_sdu;
 	msg->tail = msg->l3h + lpp.tl_sdu_len; // Strips off FCS (if present)
+	msg->len = msg->tail - msg->head;
 
 	printf("TM-SDU(%s)", tetra_get_llc_pdut_dec_name(lpp.pdu_type));
 	if (lpp.have_fcs) {
