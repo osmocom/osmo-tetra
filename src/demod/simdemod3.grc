@@ -1,0 +1,498 @@
+options:
+  parameters:
+    author: Jacek Lipkowski SQ5BPF
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: cqpsk demodulator for tetra. based on  pi4dqpsk_rx.grc (by 'Luca
+      Bortolotti' @optiluca) from https://gitlab.com/larryth/tetra-kit/ . It is meant
+      as a replacement for simdemod2.py, taked the data from stdin, and dumpd demodulated
+      data to STDOUT. Also sends via UDP the information how much the signal is mistuned
+      (this option is disabled for the version committed to osmo-tetra)
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: no_gui
+    hier_block_src_path: '.:'
+    id: simdemod3
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: run
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: DQPSK demodulator for Telive, with the AFC packet sending option disabled
+    window_size: (1000,1000)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 8]
+    rotation: 0
+    state: enabled
+
+blocks:
+- name: TETRA_HACK_IP
+  id: variable
+  parameters:
+    comment: ''
+    value: os.getenv('TETRA_HACK_IP') if os.getenv('TETRA_HACK_IP') else "127.0.0.1"
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [304, 92.0]
+    rotation: 0
+    state: disabled
+- name: TETRA_HACK_PORT
+  id: variable
+  parameters:
+    comment: ''
+    value: int(os.getenv('TETRA_HACK_PORT')) if os.getenv('TETRA_HACK_PORT') else
+      7379
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [416, 92.0]
+    rotation: 0
+    state: disabled
+- name: TETRA_HACK_RXID
+  id: variable
+  parameters:
+    comment: ''
+    value: int(os.getenv('TETRA_HACK_RXID')) if os.getenv('TETRA_HACK_RXID') else
+      0
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [176, 92.0]
+    rotation: 0
+    state: disabled
+- name: arity
+  id: variable
+  parameters:
+    comment: ''
+    value: '4'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [560, 12]
+    rotation: 0
+    state: enabled
+- name: channel_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: '36000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [288, 12]
+    rotation: 0
+    state: enabled
+- name: constel
+  id: variable_constellation
+  parameters:
+    comment: ''
+    const_points: '[1-1j, 1+1j, -1-1j, 1-1j]'
+    dims: '1'
+    normalization: digital.constellation.AMPLITUDE_NORMALIZATION
+    precision: '8'
+    rot_sym: '4'
+    soft_dec_lut: '''auto'''
+    sym_map: '[0, 1, 3, 2]'
+    type: dqpsk
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [768, 452.0]
+    rotation: 0
+    state: enabled
+- name: decim
+  id: variable
+  parameters:
+    comment: ''
+    value: '32'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [808, 12]
+    rotation: 0
+    state: enabled
+- name: nfilts
+  id: variable
+  parameters:
+    comment: ''
+    value: '32'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [400, 12]
+    rotation: 0
+    state: enabled
+- name: rrc_taps
+  id: variable
+  parameters:
+    comment: ''
+    value: firdes.root_raised_cosine(nfilts, nfilts, 1.0/float(sps), 0.35, 11*sps*nfilts)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [640, 12]
+    rotation: 0
+    state: enabled
+- name: samp_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: '2000000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [184, 12]
+    rotation: 0
+    state: enabled
+- name: sps
+  id: variable
+  parameters:
+    comment: ''
+    value: '2'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [480, 12]
+    rotation: 0
+    state: enabled
+- name: variable_adaptive_algorithm_0
+  id: variable_adaptive_algorithm
+  parameters:
+    comment: ''
+    cons: constel
+    delta: '10.0'
+    ffactor: '0.99'
+    modulus: '1'
+    step_size: 10e-3
+    type: cma
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [904, 444.0]
+    rotation: 0
+    state: true
+- name: Author_note
+  id: note
+  parameters:
+    alias: ''
+    comment: ''
+    note: 'This is originally part of the telive software: https://github.com/sq5bpf/telive '
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 156.0]
+    rotation: 0
+    state: true
+- name: analog_feedforward_agc_cc_0
+  id: analog_feedforward_agc_cc
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_samples: '8'
+    reference: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [312, 220.0]
+    rotation: 0
+    state: enabled
+- name: blocks_file_descriptor_source_0
+  id: blocks_file_descriptor_source
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    fd: '0'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    repeat: 'False'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [112, 220.0]
+    rotation: 0
+    state: true
+- name: blocks_null_sink_0
+  id: blocks_null_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    bus_structure_sink: '[[0,],]'
+    comment: ''
+    num_inputs: '3'
+    type: float
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [800, 224.0]
+    rotation: 0
+    state: true
+- name: blocks_unpack_k_bits_bb_0
+  id: blocks_unpack_k_bits_bb
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    k: constel.bits_per_symbol()
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [752, 564.0]
+    rotation: 0
+    state: enabled
+- name: digital_constellation_decoder_cb_0
+  id: digital_constellation_decoder_cb
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    constellation: constel
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [576, 452.0]
+    rotation: 0
+    state: enabled
+- name: digital_diff_phasor_cc_0
+  id: digital_diff_phasor_cc
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [624, 356.0]
+    rotation: 0
+    state: enabled
+- name: digital_fll_band_edge_cc_0
+  id: digital_fll_band_edge_cc
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    filter_size: '45'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    rolloff: '0.35'
+    samps_per_sym: sps
+    type: cc
+    w: cmath.pi/100.0
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [544, 192.0]
+    rotation: 0
+    state: enabled
+- name: digital_linear_equalizer_0
+  id: digital_linear_equalizer
+  parameters:
+    adapt_after_training: 'True'
+    affinity: ''
+    alg: variable_adaptive_algorithm_0
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_taps: '15'
+    sps: sps
+    training_sequence: '[ ]'
+    training_start_tag: corr_est
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [368, 360.0]
+    rotation: 0
+    state: true
+- name: digital_map_bb_0
+  id: digital_map_bb
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    map: constel.pre_diff_code()
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [576, 564.0]
+    rotation: 0
+    state: enabled
+- name: digital_pfb_clock_sync_xxx_0
+  id: digital_pfb_clock_sync_xxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    filter_size: nfilts
+    init_phase: nfilts/2
+    loop_bw: 2*cmath.pi/100.0
+    max_dev: '1.5'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    osps: sps
+    sps: sps
+    taps: rrc_taps
+    type: ccf
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [128, 344.0]
+    rotation: 0
+    state: enabled
+- name: import_0
+  id: import
+  parameters:
+    alias: ''
+    comment: ''
+    imports: import cmath
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [944, 12.0]
+    rotation: 0
+    state: enabled
+- name: import_1
+  id: import
+  parameters:
+    alias: ''
+    comment: ''
+    imports: import os
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1040, 12.0]
+    rotation: 0
+    state: true
+- name: send_udp_to_telive
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nEmbedded Python Blocks:\n\nEach time this file is saved,\
+      \ GRC will instantiate the first class it finds\nto get ports and parameters\
+      \ of your block. The arguments to __init__  will\nbe the parameters. All of\
+      \ them are required to have default values!\n\"\"\"\n\nimport numpy as np\n\
+      from gnuradio import gr\nimport socket\n\nclass blk(gr.sync_block):  # other\
+      \ base classes are basic_block, decim_block, interp_block\n    \"\"\"Embedded\
+      \ Python Block - periodically send UDP packet to telive\"\"\"\n\n    def __init__(self,\
+      \ ntimes=10, rxid=0, port=7379, ip=\"127.0.0.1\",scaling=10):  # only default\
+      \ arguments here\n        \"\"\"arguments to this function show up as parameters\
+      \ in GRC\"\"\"\n        gr.sync_block.__init__(\n            self,\n       \
+      \     name='Send UDP messages to telive',   # will show up in GRC\n        \
+      \    in_sig=[np.float32],\n            out_sig=None\n        )\n        # if\
+      \ an attribute with the same name as a parameter is found,\n        # a callback\
+      \ is registered (properties work, too).\n        self.sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)\n\
+      \        self.counter=0\n        self.ntimes=ntimes\n        self.tetra_hack_rxid=int(rxid)\n\
+      \        self.tetra_hack_ip=str(ip)\n        self.tetra_hack_port=int(port)\n\
+      \        self.tetra_hack_scaling=scaling\n        \n        \n\n    def work(self,\
+      \ input_items, output_items):\n        \"\"\"example: multiply with constant\"\
+      \"\"\n        self.counter=(self.counter+1)%self.ntimes\n        if self.counter==0:\n\
+      \            mmm=\"TETMON_begin FUNC:AFCVAL AFC:%i RX:%i TETMON_end\" % ( int\
+      \ (input_items[0][0] * self.tetra_hack_scaling * - 1.0), self.tetra_hack_rxid)\n\
+      \            message=bytes(mmm, \"utf-8\")\n            self.sock.sendto(message,\
+      \ (self.tetra_hack_ip, self.tetra_hack_port))\n        return len(input_items\
+      \ [0])\n"
+    affinity: ''
+    alias: ''
+    comment: ''
+    ip: TETRA_HACK_IP
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    ntimes: '5'
+    port: TETRA_HACK_PORT
+    rxid: TETRA_HACK_RXID
+    scaling: '100'
+  states:
+    _io_cache: ('Send UDP messages to telive', 'blk', [('ntimes', '10'), ('rxid',
+      '0'), ('port', '7379'), ('ip', "'127.0.0.1'"), ('scaling', '10')], [('0', 'float',
+      1)], [], 'Embedded Python Block - periodically send UDP packet to telive', ['ntimes'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [960, 140.0]
+    rotation: 0
+    state: disabled
+- name: stdout_sink
+  id: blocks_file_descriptor_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    fd: '1'
+    type: byte
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [960, 564.0]
+    rotation: 0
+    state: true
+
+connections:
+- [analog_feedforward_agc_cc_0, '0', digital_fll_band_edge_cc_0, '0']
+- [blocks_file_descriptor_source_0, '0', analog_feedforward_agc_cc_0, '0']
+- [blocks_unpack_k_bits_bb_0, '0', stdout_sink, '0']
+- [digital_constellation_decoder_cb_0, '0', digital_map_bb_0, '0']
+- [digital_diff_phasor_cc_0, '0', digital_constellation_decoder_cb_0, '0']
+- [digital_fll_band_edge_cc_0, '0', digital_pfb_clock_sync_xxx_0, '0']
+- [digital_fll_band_edge_cc_0, '1', blocks_null_sink_0, '0']
+- [digital_fll_band_edge_cc_0, '1', send_udp_to_telive, '0']
+- [digital_fll_band_edge_cc_0, '2', blocks_null_sink_0, '1']
+- [digital_fll_band_edge_cc_0, '3', blocks_null_sink_0, '2']
+- [digital_linear_equalizer_0, '0', digital_diff_phasor_cc_0, '0']
+- [digital_map_bb_0, '0', blocks_unpack_k_bits_bb_0, '0']
+- [digital_pfb_clock_sync_xxx_0, '0', digital_linear_equalizer_0, '0']
+
+metadata:
+  file_format: 1
+  grc_version: 3.10.5.1

@@ -1,0 +1,73 @@
+#!/bin/bash
+#
+# receiver1udp (c) 2023 Jacek Lipkowski SQ5BPF <sq5bpf@lipkowski.org>
+#
+# This is an example how to get I/Q data via udp packets,
+# feed them to a qpsk demodulator, and feed the result to tetra-rx
+#
+# Originally this was developed to work with the osmo-tetra-sq5bpf tree
+# but will work with original osmo-tetra too
+#
+#
+# To use with an rtl-sdr dongle:
+#
+# - run the demod/telive_1ch_simple_gr310_udp.py (you can also use the telive_1ch_simple_gr310_udp.grc in gnuradio-companion)
+#
+# - run ./receiver1udp
+#
+# - enter the frequency in the receiver window, set the ppm (frequency correction) and the gain
+#
+
+
+if [ "$1" ]; then
+	RXID=$1
+else
+	RXID=1
+fi
+
+
+# you can also set GR_VERSION yourself outside of this script --sq5bpf
+[ "$GR_VERSION" ] || GR_VERSION=`gnuradio-config-info -v|cut -d . -f 1-2|tr -d v`
+case $GR_VERSION in
+	3.6)
+		GR_DIR=gnuradio-3.6
+		PYT=2
+		;;
+	3.7)
+		GR_DIR=gnuradio-3.7
+		PYT=2
+		;;
+	3.10)
+		GR_DIR=gnuradio-3.10
+		PYT=3
+		;;
+	*)
+		echo "Unsupported gnuradio version $GR_VERSION"
+		exit 1
+		;;
+esac
+
+UDP_PORT=42001
+
+
+ulimit -c unlimited
+
+#tetra-rx args: -a turns on pseudo-afc , -i uses an internal float_t_bits
+# -r turns on fragment reassembly, -s tries to dump unknown SDS protocols as text
+#
+#if you have problems with the receiver, then try to remove -a
+
+case "$PYT" in
+	2)
+		socat -b 4096 UDP-RECV:${UDP_PORT} STDOUT | demod/simdemod2.py -o /dev/stdout -i /dev/stdin |  ./float_to_bits -a /dev/stdin /dev/stdout | ./tetra-rx  /dev/stdin
+		;;
+	3)
+		socat -b 4096 UDP-RECV:${UDP_PORT} STDOUT | demod/simdemod3.py | ./tetra-rx   /dev/stdin
+		;;
+	*)
+		echo "Dont know how to handle pythin version [$PYT]"
+		exit 1
+esac
+
+
+
