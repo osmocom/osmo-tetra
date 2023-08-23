@@ -33,6 +33,11 @@
 #include <phy/tetra_burst.h>
 
 #include "tetra_crypto.h"
+#include "tea1.h"
+#include "tea2.h"
+#include "tea3.h"
+#include "taa1.h"
+
 
 struct tetra_crypto_database _tcdb, *tcdb = &_tcdb;
 
@@ -169,23 +174,30 @@ static bool generate_keystream(struct tetra_crypto_state *tcs, struct tetra_key 
 	uint8_t cn[2] = {(tcs->cn >> 8) & 0xFF, tcs->cn & 0xFF};
 	uint8_t la[2] = {(tcs->la >> 8) & 0xFF, tcs->la & 0xFF};
 	uint8_t cc[1] = {tcs->cc & 0xFF};
-	/* TODO FIXME add call to TB5 to derive eck */
+	tb5(cn, la, cc, key->key, eck);
 
 	/* Generate keystream with required KSG */
 	switch (key->network_info->ksg_type) {
-	/* TODO FIXME add cases/calls to TEA keystream generator functions */
+	case KSG_TEA1:
+		tea1(iv, eck, num_bytes, ks_bytes);
+		break;
+
+	case KSG_TEA2:
+		tea2(iv, eck, num_bytes, ks_bytes);
+		break;
+
+	case KSG_TEA3:
+		tea3(iv, eck, num_bytes, ks_bytes);
+			break;
+
 	default:
 		fprintf(stderr, "tetra_crypto: KSG type %d not supported\n", key->network_info->ksg_type);
 		return false;
 	}
 
-	for (int i = 0; i < num_bytes; i++)
-		for (int j = 0; j < 8; j++)
-			ks_out[i * 8 + j] = (ks_bytes[i] >> (7-j)) & 1;
-
 	/* Expand keystream bytes into ubit format */
 	for (int i = 0; i < num_bits; i++)
-		ks_out[i] = (ks_bytes[num_bits / 8] >> (7-(num_bits % 8))) & 1;
+		ks_out[i] = (ks_bytes[i / 8] >> (7-(i % 8))) & 1;
 
 	return true;
 }
@@ -277,12 +289,12 @@ int load_keystore(char *tetra_keyfile)
 	 *
 	 *   network mcc 123 mnc 456 ksg_type 1 security_class 2
 	 *   - ksg_type: decimal, see enum tetra_ksg_type
-	 *   - security_class: 2 for SCK, 3 for CCK (and DCK per ISSI)
+	 *   - security_class: 2 for SCK, 3 for CCK+DCK
 	 *
 	 *   key mcc 123 mnc 456 addr 00000000 key_type 1 key_num 002 key 1234deadbeefcafebabe
-	 *   - addr: decimal, leave zero for key type 1 (CCK/SCK)
+	 *   - addr: decimal, only relevant for DCK/MGCK/GCK, also, currently unimplemented
 	 *   - key_type: 1 CCK/SCK, 2 DCK, 3 MGCK, 4 GCK
-	 *   - key_num: SCK_VN or group key number depending on type
+	 *   - key_num: SCK_VN or group key number depending on type, currently unimplemented
 	 *   - key: 80-bit key hex string
 	 */
 

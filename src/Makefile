@@ -16,7 +16,7 @@ libosmo-tetra-phy.a: phy/tetra_burst_sync.o phy/tetra_burst.o
 libosmo-tetra-mac.a: lower_mac/tetra_conv_enc.o lower_mac/tch_reordering.o tetra_tdma.o lower_mac/tetra_scramb.o lower_mac/tetra_rm3014.o lower_mac/tetra_interleave.o lower_mac/crc_simple.o tetra_common.o lower_mac/viterbi.o lower_mac/viterbi_cch.o lower_mac/viterbi_tch.o lower_mac/tetra_lower_mac.o tetra_upper_mac.o tetra_mac_pdu.o tetra_llc_pdu.o tetra_llc.o tetra_mle_pdu.o tetra_mle.o tetra_mm_pdu.o tetra_cmce_pdu.o tetra_sndcp_pdu.o tetra_gsmtap.o tuntap.o
 	$(AR) r $@ $^
 
-libosmo-tetra-crypto.a: crypto/tetra_crypto.o
+libosmo-tetra-crypto.a: crypto/tea1.o crypto/tea2.o crypto/tea3.o crypto/hurdle.o crypto/taa1.o crypto/tetra_crypto.o
 	$(AR) r $@ $^
 
 float_to_bits: float_to_bits.o
