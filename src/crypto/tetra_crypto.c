@@ -204,8 +204,15 @@ static bool generate_keystream(struct tetra_crypto_state *tcs, struct tetra_key 
 
 bool decrypt_identity(struct tetra_crypto_state *tcs, struct tetra_addr *addr)
 {
-	/* TODO FIXME implement TA61 decryption */
-	return false;
+	if (!tcs->cck)
+		return false;
+
+	uint8_t a_addr[3] = {addr->ssi >> 16, addr->ssi >> 8, addr->ssi};
+	ta61_inv(tcs->cck->key, a_addr, a_addr);
+
+	uint32_t addr_decrypted = (a_addr[0] << 16) | (a_addr[1] << 8) | a_addr[2];
+	addr->ssi = addr_decrypted;
+	return true;
 }
 
 bool decrypt_mac_element(struct tetra_crypto_state *tcs, struct tetra_tmvsap_prim *tmvp, struct tetra_key *key, int l1_len, int tmpdu_offset)
