@@ -1,0 +1,2 @@
+network mcc 204 mnc 1337 ksg_type 1 security_class 2
+key mcc 204 mnc 1337 addr 00000000 key_type 1 key_num 1234 key 00112233445566778899
