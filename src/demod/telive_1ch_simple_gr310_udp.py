@@ -8,42 +8,29 @@
 # Title: SQ5BPF Tetra live receiver 1ch simple UDP demo with fixed offset (gnuradio 3.10 version) xmlrpc
 # Author: Jacek Lipkowski SQ5BPF
 # Description: This is a receiver flowgraph, uses a rtl-sdr dongle, and outputs a downsampled stream to 127.0.0.1 42001/udp. This can be used with telive, or just osmo-tetra
-# GNU Radio version: 3.10.5.1
-
-from packaging.version import Version as StrictVersion
-
-if __name__ == '__main__':
-    import ctypes
-    import sys
-    if sys.platform.startswith('linux'):
-        try:
-            x11 = ctypes.cdll.LoadLibrary('libX11.so')
-            x11.XInitThreads()
-        except:
-            print("Warning: failed to XInitThreads()")
+# GNU Radio version: 3.10.12.0
 
 from PyQt5 import Qt
-from gnuradio import eng_notation
 from gnuradio import qtgui
-from gnuradio.filter import firdes
-import sip
+from PyQt5 import QtCore
 from gnuradio import analog
+from gnuradio import eng_notation
 from gnuradio import filter
+from gnuradio.filter import firdes
 from gnuradio import gr
 from gnuradio.fft import window
 import sys
 import signal
+from PyQt5 import Qt
 from argparse import ArgumentParser
 from gnuradio.eng_arg import eng_float, intx
 from gnuradio import network
-from gnuradio.qtgui import Range, RangeWidget
-from PyQt5 import QtCore
 import osmosdr
 import time
+import sip
+import threading
 
 
-
-from gnuradio import qtgui
 
 class telive_1ch_simple_gr310_udp(gr.top_block, Qt.QWidget):
 
@@ -54,8 +41,8 @@ class telive_1ch_simple_gr310_udp(gr.top_block, Qt.QWidget):
         qtgui.util.check_set_qss()
         try:
             self.setWindowIcon(Qt.QIcon.fromTheme('gnuradio-grc'))
-        except:
-            pass
+        except BaseException as exc:
+            print(f"Qt GUI: Could not set Icon: {str(exc)}", file=sys.stderr)
         self.top_scroll_layout = Qt.QVBoxLayout()
         self.setLayout(self.top_scroll_layout)
         self.top_scroll = Qt.QScrollArea()
@@ -68,15 +55,15 @@ class telive_1ch_simple_gr310_udp(gr.top_block, Qt.QWidget):
         self.top_grid_layout = Qt.QGridLayout()
         self.top_layout.addLayout(self.top_grid_layout)
 
-        self.settings = Qt.QSettings("GNU Radio", "telive_1ch_simple_gr310_udp")
+        self.settings = Qt.QSettings("gnuradio/flowgraphs", "telive_1ch_simple_gr310_udp")
 
         try:
-            if StrictVersion(Qt.qVersion()) < StrictVersion("5.0.0"):
-                self.restoreGeometry(self.settings.value("geometry").toByteArray())
-            else:
-                self.restoreGeometry(self.settings.value("geometry"))
-        except:
-            pass
+            geometry = self.settings.value("geometry")
+            if geometry:
+                self.restoreGeometry(geometry)
+        except BaseException as exc:
+            print(f"Qt GUI: Could not restore geometry: {str(exc)}", file=sys.stderr)
+        self.flowgraph_started = threading.Event()
 
         ##################################################
         # Variables
@@ -103,22 +90,22 @@ class telive_1ch_simple_gr310_udp(gr.top_block, Qt.QWidget):
         # Blocks
         ##################################################
 
-        self._xlate_offset_fine1_range = Range(-5e3, +5e3, 1, 0, 200)
-        self._xlate_offset_fine1_win = RangeWidget(self._xlate_offset_fine1_range, self.set_xlate_offset_fine1, "Fine tune1", "counter_slider", float, QtCore.Qt.Horizontal)
+        self._xlate_offset_fine1_range = qtgui.Range(-5e3, +5e3, 1, 0, 200)
+        self._xlate_offset_fine1_win = qtgui.RangeWidget(self._xlate_offset_fine1_range, self.set_xlate_offset_fine1, "Fine tune1", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_grid_layout.addWidget(self._xlate_offset_fine1_win, 0, 2, 1, 3)
         for r in range(0, 1):
             self.top_grid_layout.setRowStretch(r, 1)
         for c in range(2, 5):
             self.top_grid_layout.setColumnStretch(c, 1)
-        self._sdr_gain_range = Range(0, 50, 1, 30, 200)
-        self._sdr_gain_win = RangeWidget(self._sdr_gain_range, self.set_sdr_gain, "gain", "counter_slider", int, QtCore.Qt.Horizontal)
+        self._sdr_gain_range = qtgui.Range(0, 50, 1, 30, 200)
+        self._sdr_gain_win = qtgui.RangeWidget(self._sdr_gain_range, self.set_sdr_gain, "gain", "counter_slider", int, QtCore.Qt.Horizontal)
         self.top_grid_layout.addWidget(self._sdr_gain_win, 0, 8, 1, 2)
         for r in range(0, 1):
             self.top_grid_layout.setRowStretch(r, 1)
         for c in range(8, 10):
             self.top_grid_layout.setColumnStretch(c, 1)
-        self._ppm_corr_range = Range(-100, 100, 0.5, 0, 200)
-        self._ppm_corr_win = RangeWidget(self._ppm_corr_range, self.set_ppm_corr, "ppm", "counter_slider", float, QtCore.Qt.Horizontal)
+        self._ppm_corr_range = qtgui.Range(-100, 100, 0.5, 0, 200)
+        self._ppm_corr_win = qtgui.RangeWidget(self._ppm_corr_range, self.set_ppm_corr, "ppm", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_grid_layout.addWidget(self._ppm_corr_win, 0, 5, 1, 3)
         for r in range(0, 1):
             self.top_grid_layout.setRowStretch(r, 1)
@@ -128,7 +115,7 @@ class telive_1ch_simple_gr310_udp(gr.top_block, Qt.QWidget):
         self._freq_tool_bar.addWidget(Qt.QLabel("Frequency" + ": "))
         self._freq_line_edit = Qt.QLineEdit(str(self.freq))
         self._freq_tool_bar.addWidget(self._freq_line_edit)
-        self._freq_line_edit.returnPressed.connect(
+        self._freq_line_edit.editingFinished.connect(
             lambda: self.set_freq(eng_notation.str_to_num(str(self._freq_line_edit.text()))))
         self.top_grid_layout.addWidget(self._freq_tool_bar, 0, 0, 1, 2)
         for r in range(0, 1):
@@ -256,8 +243,7 @@ class telive_1ch_simple_gr310_udp(gr.top_block, Qt.QWidget):
         self.network_udp_sink_0 = network.udp_sink(gr.sizeof_gr_complex, 1, udp_dest_addr, (first_port+1), 0, udp_packet_size, False)
         self.mmse_resampler_xx_0 = filter.mmse_resampler_cc(0, (float(float(if_samp_rate)/float(out_sample_rate))))
         self.freq_xlating_fir_filter_xxx_0 = filter.freq_xlating_fir_filter_ccc(first_decim, firdes.low_pass(1, samp_rate, options_low_pass, options_low_pass*0.2), (xlate_offset1+xlate_offset_fine1), samp_rate)
-        self.analog_agc3_xx_0 = analog.agc3_cc((1e-3), (1e-4), 1.0, 1.0, 1)
-        self.analog_agc3_xx_0.set_max_gain(65536)
+        self.analog_agc3_xx_0 = analog.agc3_cc((1e-3), (1e-4), 1.0, 1.0, 1, 65536)
 
 
         ##################################################
@@ -272,7 +258,7 @@ class telive_1ch_simple_gr310_udp(gr.top_block, Qt.QWidget):
 
 
     def closeEvent(self, event):
-        self.settings = Qt.QSettings("GNU Radio", "telive_1ch_simple_gr310_udp")
+        self.settings = Qt.QSettings("gnuradio/flowgraphs", "telive_1ch_simple_gr310_udp")
         self.settings.setValue("geometry", self.saveGeometry())
         self.stop()
         self.wait()
@@ -408,14 +394,12 @@ class telive_1ch_simple_gr310_udp(gr.top_block, Qt.QWidget):
 
 def main(top_block_cls=telive_1ch_simple_gr310_udp, options=None):
 
-    if StrictVersion("4.5.0") <= StrictVersion(Qt.qVersion()) < StrictVersion("5.0.0"):
-        style = gr.prefs().get_string('qtgui', 'style', 'raster')
-        Qt.QApplication.setGraphicsSystem(style)
     qapp = Qt.QApplication(sys.argv)
 
     tb = top_block_cls()
 
     tb.start()
+    tb.flowgraph_started.set()
 
     tb.show()
 

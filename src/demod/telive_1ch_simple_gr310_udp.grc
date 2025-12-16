@@ -64,6 +64,7 @@ blocks:
   id: variable_qtgui_entry
   parameters:
     comment: ''
+    entry_signal: editingFinished
     gui_hint: 0,0,1,2
     label: Frequency
     type: real
@@ -887,27 +888,6 @@ blocks:
     coordinate: [832, 156.0]
     rotation: 0
     state: true
-- name: xlate_offset_fine1
-  id: variable_slider
-  parameters:
-    alias: ''
-    comment: ''
-    converver: float_converter
-    grid_pos: 3,1,1,4
-    label: Fine Tune
-    max: '10000'
-    min: '-10000'
-    notebook: ''
-    num_steps: '200'
-    style: wx.SL_HORIZONTAL
-    value: '0'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [144, 770]
-    rotation: 0
-    state: enabled
 - name: xmlrpc_server_0
   id: xmlrpc_server
   parameters:
@@ -933,4 +913,4 @@ connections:
 
 metadata:
   file_format: 1
-  grc_version: 3.10.5.1
+  grc_version: 3.10.12.0
