@@ -16,5 +16,6 @@ void HURDLE_enc_cbc(uint8_t abCiphertext[16], const uint8_t abPlaintext[16], uin
 void HURDLE_dec_cts(uint8_t abPlaintext[15], const uint8_t abCiphertext[15], uint8_t abKey[16]);
 
 extern const uint8_t g_abHurdleSbox[256];
+extern const uint8_t g_abHurdleInvSbox[256];
 
 #endif /* HAVE_HURDLE_H */
