@@ -57,10 +57,11 @@ void macpdu_decode_sysinfo(struct tetra_si_decoded *sid, const uint8_t *si_bits)
 	sid->access_parameter  = bits_to_uint(cur,  4); cur +=  4;
 	sid->radio_dl_timeout  = bits_to_uint(cur,  4); cur +=  4;
 	sid->cck_valid_no_hf   = *cur++;
-	if (sid->cck_valid_no_hf)
-		sid->cck_id = bits_to_uint(cur, 16);
-	else
-		sid->hyperframe_number = bits_to_uint(cur, 16);
+	if (sid->cck_valid_no_hf) {
+		sid->cck_id = bits_to_uint(cur, 16); cur += 16;
+	} else {
+		sid->hyperframe_number = bits_to_uint(cur, 16); cur += 16;
+	}
 	sid->option_field      = bits_to_uint(cur,  2); cur +=  2;
 
 	switch (sid->option_field) {
