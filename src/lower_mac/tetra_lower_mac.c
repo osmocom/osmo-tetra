@@ -194,8 +194,11 @@ void tp_sap_udata_ind(enum tp_sap_data_type type, int blk_num, const uint8_t *bi
 	if (tms->cur_burst.is_traffic && type == TPSAP_T_NDB && blk_num == BLK_1)
 		tms->cur_burst.blk1_stolen = true;
 
-	/* If this is a traffic channel, dump. */
-	if (tms->cur_burst.is_traffic && (type == TPSAP_T_SCH_F || (blk_num == BLK_2 && !tms->cur_burst.blk2_stolen))) {
+	/* If this is a traffic channel and we have a dump output directory, dump. */
+	if (tms->dumpdir &&
+	    tms->cur_burst.is_traffic &&
+	    (type == TPSAP_T_SCH_F || (blk_num == BLK_2 && !tms->cur_burst.blk2_stolen))) {
+
 		char fname[PATH_MAX];
 		int16_t block[690];
 		FILE *f;
